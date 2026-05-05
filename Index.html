@@ -1,587 +1,3142 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>תכולות 2026 — Gantt</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:        #0e1216;
-    --bg-2:      #141a21;
-    --panel:     #181f27;
-    --panel-2:   #1f2730;
-    --line:      #232c36;
-    --line-soft: #1c242d;
-    --ink:       #e8ecef;
-    --ink-dim:   #9aa6b2;
-    --ink-faint: #5b6772;
-    --accent:    #f5b14a;
-    --accent-2:  #ff7a59;
-    --bar-1:     #4ea4c4;
-    --bar-2:     #6f8edb;
-    --bar-3:     #c98aa9;
-    --bar-4:     #8fb98a;
-    --bar-5:     #d4a35a;
-    --grid:      rgba(255,255,255,.04);
-    --grid-month:rgba(255,255,255,.10);
-  }
-
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
-  body{
-    background:
-      radial-gradient(1200px 600px at 85% -10%, rgba(245,177,74,.06), transparent 60%),
-      radial-gradient(900px 500px at 0% 110%, rgba(78,164,196,.07), transparent 60%),
-      var(--bg);
-    color:var(--ink);
-    font-family:"Heebo", system-ui, -apple-system, sans-serif;
-    font-weight:400;
-    min-height:100vh;
-    letter-spacing:.005em;
-  }
-  .wrap{ max-width:1480px; margin:0 auto; padding:48px 36px 80px; }
-
-  header{
-    display:flex; align-items:flex-end; justify-content:space-between;
-    gap:24px; margin-bottom:36px; padding-bottom:24px;
-    border-bottom:1px solid var(--line);
-  }
-  .title-block{display:flex; flex-direction:column; gap:6px}
-  .eyebrow{
-    font-family:"JetBrains Mono", monospace;
-    font-size:11px; letter-spacing:.18em;
-    color:var(--ink-faint); text-transform:uppercase;
-  }
-  h1{
-    font-family:"Frank Ruhl Libre", serif;
-    font-weight:900; font-size:clamp(36px, 5vw, 56px);
-    line-height:1; margin:0; letter-spacing:-.01em;
-  }
-  h1 .num{ color:var(--accent); font-feature-settings:"tnum"; }
-  .subtitle{ color:var(--ink-dim); font-size:14px; margin-top:8px; max-width:520px; }
-
-  .stats{ display:flex; gap:32px; }
-  .stat{ display:flex; flex-direction:column; gap:4px; text-align:left; }
-  .stat .v{
-    font-family:"Frank Ruhl Libre", serif;
-    font-size:34px; font-weight:700; line-height:1;
-    color:var(--ink); font-feature-settings:"tnum";
-  }
-  .stat .l{
-    font-family:"JetBrains Mono", monospace;
-    font-size:10px; letter-spacing:.16em;
-    color:var(--ink-faint); text-transform:uppercase;
-  }
-
-  .legend{
-    display:flex; align-items:center; gap:22px; flex-wrap:wrap;
-    padding:14px 18px; background:var(--panel);
-    border:1px solid var(--line); border-radius:10px;
-    margin-bottom:18px; font-size:12.5px; color:var(--ink-dim);
-  }
-  .legend .item{display:flex; align-items:center; gap:8px}
-  .swatch{ width:14px; height:14px; border-radius:3px;
-    background:linear-gradient(135deg, var(--bar-1), var(--bar-2)); }
-  .today-marker{ width:2px; height:14px; background:var(--accent); box-shadow:0 0 8px var(--accent); }
-  .danger-marker{ width:14px; height:14px; border-radius:3px; background:var(--accent-2); opacity:.85; }
-  .legend .sep{flex:1}
-  .legend .meta{ font-family:"JetBrains Mono", monospace; font-size:11px;
-    color:var(--ink-faint); letter-spacing:.08em; }
-  .reload-btn{
-    background:var(--panel-2); color:var(--ink-dim);
-    border:1px solid var(--line); border-radius:6px;
-    padding:6px 12px; font-family:"Heebo", sans-serif;
-    font-size:11.5px; cursor:pointer; transition:all .2s ease;
-  }
-  .reload-btn:hover{ background:var(--line); color:var(--ink); }
-
-  .gantt{
-    background:var(--panel); border:1px solid var(--line);
-    border-radius:14px; overflow:hidden;
-    box-shadow:0 30px 80px -40px rgba(0,0,0,.6);
-  }
-  .gantt-header{
-    display:grid; grid-template-columns: 320px 1fr;
-    border-bottom:1px solid var(--line); background:var(--panel-2);
-  }
-  .gh-left{
-    padding:18px 22px; border-left:1px solid var(--line);
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .gh-left .label{
-    font-family:"JetBrains Mono", monospace; font-size:10px;
-    letter-spacing:.18em; color:var(--ink-faint); text-transform:uppercase;
-  }
-  .months{ display:grid; height:100%; align-items:stretch; }
-  .month{
-    border-right:1px solid var(--grid-month);
-    padding:14px 12px 12px; display:flex; flex-direction:column;
-    gap:2px; min-height:62px;
-  }
-  .month:last-child{border-right:none}
-  .month .m-name{
-    font-family:"Frank Ruhl Libre", serif;
-    font-size:15px; font-weight:700; color:var(--ink);
-  }
-  .month .m-year{
-    font-family:"JetBrains Mono", monospace;
-    font-size:10px; color:var(--ink-faint); letter-spacing:.1em;
-  }
-  .month.is-current .m-name{ color:var(--accent) }
-  .month.is-current .m-year{ color:var(--accent); opacity:.7 }
-
-  .gantt-body{ position:relative }
-  .row{
-    display:grid; grid-template-columns: 320px 1fr;
-    border-bottom:1px solid var(--line-soft);
-    transition:background .25s ease;
-  }
-  .row:last-child{border-bottom:none}
-  .row:hover{ background:rgba(255,255,255,.015) }
-  .row-info{
-    padding:18px 22px; border-left:1px solid var(--line);
-    display:flex; flex-direction:column; gap:6px; background:var(--panel);
-  }
-  .task-name{
-    font-family:"Frank Ruhl Libre", serif;
-    font-size:18px; font-weight:700; line-height:1.25; color:var(--ink);
-  }
-  .task-people{ font-size:12px; color:var(--ink-dim); line-height:1.4; }
-  .task-people::before{
-    content:""; display:inline-block; width:6px; height:6px;
-    border-radius:50%; background:var(--ink-faint);
-    margin-left:8px; transform:translateY(-2px);
-  }
-
-  .track{
-    position:relative;
-    background-image:
-      repeating-linear-gradient(to left,
-        var(--grid) 0, var(--grid) 1px,
-        transparent 1px, transparent var(--month-w, 100px)
-      );
-  }
-
-  .bar{
-    position:absolute; top:50%; transform:translateY(-50%);
-    height:34px; border-radius:6px; overflow:hidden; cursor:pointer;
-    transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
-    box-shadow: 0 6px 20px -8px rgba(0,0,0,.6);
-  }
-  .bar:hover{
-    transform:translateY(-50%) translateY(-1px);
-    box-shadow: 0 12px 28px -10px rgba(0,0,0,.7);
-    filter:brightness(1.08); z-index:5;
-  }
-  .bar .fill{ position:absolute; inset:0; }
-  .bar.c1 .fill{background:linear-gradient(90deg, var(--bar-1), var(--bar-2))}
-  .bar.c2 .fill{background:linear-gradient(90deg, var(--bar-2), var(--bar-3))}
-  .bar.c3 .fill{background:linear-gradient(90deg, var(--bar-3), var(--bar-5))}
-  .bar.c4 .fill{background:linear-gradient(90deg, var(--bar-4), var(--bar-1))}
-  .bar.c5 .fill{background:linear-gradient(90deg, var(--bar-5), var(--bar-3))}
-  .bar.danger .fill{ background:linear-gradient(90deg, var(--accent-2), #ff9d6f); }
-  .bar .label{
-    position:absolute; inset:0; display:flex;
-    align-items:center; justify-content:space-between;
-    padding:0 12px; font-size:12.5px; font-weight:500;
-    color:#0e1216; mix-blend-mode:screen;
-    pointer-events:none; white-space:nowrap;
-  }
-  .bar .label .due{
-    font-family:"JetBrains Mono", monospace;
-    font-size:11px; font-weight:600; opacity:.85;
-  }
-  .bar::before{
-    content:""; position:absolute; left:0; top:0; bottom:0;
-    width:3px; background:rgba(0,0,0,.35);
-  }
-
-  .today-overlay{
-    position:absolute;
-    top:0; bottom:0;
-    left:0;
-    right:320px;           /* match the 320px sidebar so overlay = track width */
-    pointer-events:none;
-    z-index:3;
-  }
-
-  .today-line{
-    position:absolute; top:0; bottom:0; width:2px;
-    background:var(--accent);
-    box-shadow:0 0 12px rgba(245,177,74,.6);
-    pointer-events:none;
-  }
-  .today-pill{
-    position:absolute;
-    top:-30px; right:50%; transform:translateX(50%);
-    background:var(--accent); color:#0e1216;
-    font-size:10px; font-weight:700;
-    padding:3px 10px; border-radius:4px;
-    letter-spacing:.06em; font-family:"Heebo", sans-serif;
-    white-space:nowrap;
-    display:flex; align-items:center; gap:6px;
-    box-shadow:0 4px 12px rgba(245,177,74,.4);
-  }
-  .today-pill .date{
-    font-family:"JetBrains Mono", monospace;
-    font-size:10px; font-weight:600;
-    opacity:.8;
-    border-right:1px solid rgba(14,18,22,.3);
-    padding-right:6px;
-  }
-
-  .tooltip{
-    position:fixed; z-index:50;
-    background:var(--bg-2); border:1px solid var(--line);
-    border-radius:10px; padding:14px 16px; max-width:380px;
-    box-shadow:0 30px 60px -20px rgba(0,0,0,.8);
-    pointer-events:none; opacity:0; transform:translateY(4px);
-    transition:opacity .15s ease, transform .15s ease;
-    font-size:13px; line-height:1.55;
-  }
-  .tooltip.show{ opacity:1; transform:translateY(0) }
-  .tooltip .tt-title{
-    font-family:"Frank Ruhl Libre", serif;
-    font-weight:700; font-size:16px; margin-bottom:8px;
-    color:var(--ink); border-bottom:1px solid var(--line);
-    padding-bottom:8px;
-  }
-  .tooltip .tt-row{ display:flex; gap:8px; margin:4px 0; }
-  .tooltip .tt-key{
-    font-family:"JetBrains Mono", monospace;
-    font-size:10px; letter-spacing:.12em;
-    color:var(--ink-faint); text-transform:uppercase;
-    min-width:70px; padding-top:2px;
-  }
-  .tooltip .tt-val{ color:var(--ink-dim); flex:1 }
-  .tooltip .tt-notes{
-    margin-top:10px; padding-top:10px;
-    border-top:1px solid var(--line);
-    color:var(--ink-dim); font-size:12.5px; line-height:1.6;
-  }
-
-  footer{
-    margin-top:32px; display:flex;
-    justify-content:space-between; align-items:center;
-    font-family:"JetBrains Mono", monospace; font-size:10.5px;
-    color:var(--ink-faint); letter-spacing:.14em; text-transform:uppercase;
-  }
-  footer .dot{
-    display:inline-block; width:6px; height:6px; border-radius:50%;
-    background:var(--accent); margin-left:8px;
-    box-shadow:0 0 8px var(--accent);
-    animation:pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse{ 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:.5; transform:scale(.85)} }
-
-  .row .bar{ animation:bar-in .7s cubic-bezier(.2,.7,.2,1) backwards; }
-  @keyframes bar-in{
-    from{ transform:translateY(-50%) scaleX(0); transform-origin:right center; opacity:0 }
-    to  { transform:translateY(-50%) scaleX(1); opacity:1 }
-  }
-
-  /* Loader / Drop zone */
-  .loader{
-    border:2px dashed var(--line);
-    border-radius:14px;
-    padding:64px 36px;
-    text-align:center;
-    background:var(--panel);
-    transition:border-color .25s ease, background .25s ease;
-  }
-  .loader.drag{ border-color:var(--accent); background:rgba(245,177,74,.04); }
-  .loader h2{
-    font-family:"Frank Ruhl Libre", serif;
-    font-size:28px; margin:0 0 8px;
-    color:var(--ink);
-  }
-  .loader p{ color:var(--ink-dim); margin:0 0 24px; font-size:14px; }
-  .loader .file-pick{
-    display:inline-block;
-    background:var(--accent); color:#0e1216;
-    padding:12px 28px; border-radius:8px;
-    font-weight:700; font-size:14px; cursor:pointer;
-    border:none; font-family:"Heebo", sans-serif;
-    transition:transform .15s ease, filter .15s ease;
-  }
-  .loader .file-pick:hover{ filter:brightness(1.1); transform:translateY(-1px); }
-  .loader .hint{
-    font-family:"JetBrains Mono", monospace;
-    font-size:11px; color:var(--ink-faint);
-    letter-spacing:.08em; margin-top:18px;
-  }
-  .loader .err{
-    color:var(--accent-2); font-size:13px; margin-top:14px; min-height:18px;
-  }
-</style>
-</head>
-<body>
-<div class="wrap">
-
-  <header>
-    <div class="title-block">
-      <div class="eyebrow">Project Portfolio · GeomAI</div>
-      <h1>תכולות <span class="num">2026</span></h1>
-      <div class="subtitle">לוח זמנים של פרויקטים פעילים — תרשים גאנט אינטראקטיבי. ריחוף על משימה לפרטים מלאים.</div>
-    </div>
-    <div class="stats">
-      <div class="stat"><div class="v" id="stat-total">—</div><div class="l">Total</div></div>
-      <div class="stat"><div class="v" id="stat-active">—</div><div class="l">Active</div></div>
-      <div class="stat"><div class="v" id="stat-soon">—</div><div class="l">≤ 30d</div></div>
-    </div>
-  </header>
-
-  <div class="legend" id="legend" style="display:none;">
-    <div class="item"><span class="swatch"></span><span>משימה פעילה</span></div>
-    <div class="item"><span class="danger-marker"></span><span>דדליין קרוב (≤ 30 יום)</span></div>
-    <div class="item"><span class="today-marker"></span><span>היום</span></div>
-    <div class="sep"></div>
-    <div class="meta" id="range-label">—</div>
-    <button class="reload-btn" id="load-other">החלף קובץ</button>
-  </div>
-
-  <div class="loader" id="loader" style="display:none;">
-    <h2>טען קובץ JSON</h2>
-    <p>גרור לכאן את הקובץ <code style="font-family:JetBrains Mono,monospace;color:var(--accent);">data_2026.json</code> או לחץ לבחירה</p>
-    <label class="file-pick">
-      בחר קובץ
-      <input type="file" id="file-input" accept=".json,application/json" hidden>
-    </label>
-    <div class="hint">הקובץ נטען מקומית — לא נשלח לשום מקום</div>
-    <div class="err" id="err"></div>
-  </div>
-
-  <div class="gantt" id="gantt" style="display:none;"></div>
-
-  <footer>
-    <div><span class="dot"></span>Live · עודכן <span id="updated"></span></div>
-    <div>SmartCAD / GeomAI</div>
-  </footer>
-</div>
-
-<div class="tooltip" id="tooltip"></div>
-
-<script>
-  const JSON_URL = "data_2026.json";
-  const ROOT_KEY = "תכולות 2026";
-  const DEFAULT_LEAD_MONTHS = 6;
-  const HE_MONTHS_SHORT = ["ינו׳","פבר׳","מרץ","אפר׳","מאי","יוני","יולי","אוג׳","ספט׳","אוק׳","נוב׳","דצמ׳"];
-
-  const loaderEl = document.getElementById("loader");
-  const ganttEl  = document.getElementById("gantt");
-  const legendEl = document.getElementById("legend");
-  const errEl    = document.getElementById("err");
-
-  // Try fetch first; fall back to file picker (file:// blocks fetch in most browsers)
-  fetch(JSON_URL, { cache: "no-cache" })
-    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-    .then(json => render(json))
-    .catch(() => showLoader());
-
-  function showLoader(){
-    loaderEl.style.display = "block";
-    ganttEl.style.display  = "none";
-    legendEl.style.display = "none";
-  }
-
-  document.getElementById("file-input").addEventListener("change", e => {
-    const file = e.target.files[0];
-    if (file) readFile(file);
-  });
-
-  ["dragenter","dragover"].forEach(ev =>
-    loaderEl.addEventListener(ev, e => { e.preventDefault(); loaderEl.classList.add("drag"); }));
-  ["dragleave","drop"].forEach(ev =>
-    loaderEl.addEventListener(ev, e => { e.preventDefault(); loaderEl.classList.remove("drag"); }));
-  loaderEl.addEventListener("drop", e => {
-    const file = e.dataTransfer.files[0];
-    if (file) readFile(file);
-  });
-
-  function readFile(file){
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const json = JSON.parse(ev.target.result);
-        render(json);
-      } catch (err) {
-        errEl.textContent = "שגיאה בקריאת הקובץ: " + err.message;
-      }
-    };
-    reader.readAsText(file, "utf-8");
-  }
-
-  document.getElementById("load-other").addEventListener("click", () => {
-    showLoader();
-    errEl.textContent = "";
-  });
-
-  function parseDate(s){
-    const [d] = String(s).split(" ");
-    const [y,m,day] = d.split("-").map(Number);
-    return new Date(y, m-1, day);
-  }
-  function fmtDateHe(d){
-    return `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()}`;
-  }
-  function monthsBetween(a, b){ return (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth()); }
-  function addMonths(d, n){ const nd = new Date(d); nd.setMonth(nd.getMonth()+n); return nd; }
-  function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-  function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
-  function daysBetween(a, b){ return (b - a) / (1000*60*60*24); }
-
-  function render(json){
-    const items = json[ROOT_KEY];
-    if (!Array.isArray(items) || items.length === 0){
-      errEl.textContent = `לא נמצאו פריטים תחת המפתח "${ROOT_KEY}"`;
-      showLoader();
-      return;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3b82f6">
+  <title>דשבורד פרוייקטים</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    :root {
+      --bg: #f8f9fc;
+      --white: #fff;
+      --border: #e5e7ee;
+      --text: #1e293b;
+      --text2: #475569;
+      --text3: #94a3b8;
+      --blue: #3b82f6;
+      --blue-l: #eff6ff;
+      --green: #10b981;
+      --green-l: #ecfdf5;
+      --orange: #f59e0b;
+      --orange-l: #fffbeb;
+      --red: #ef4444;
+      --red-l: #fef2f2;
+      --purple: #8b5cf6;
+      --purple-l: #f5f3ff;
+      --gray: #64748b;
+      --gray-l: #f1f5f9;
+      --cyan: #06b6d4;
+      --cyan-l: #ecfeff;
+      --pink: #ec4899;
+      --pink-l: #fdf2f8;
+      --teal: #14b8a6;
+      --teal-l: #f0fdfa;
+      --indigo: #6366f1;
+      --indigo-l: #eef2ff;
+      --side: 260px;
+      --topbar-h: 56px;
+      --bottomnav-h: 64px;
+      --sh: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+      --sh-md: 0 4px 12px rgba(0,0,0,0.08);
+      --sh-lg: 0 10px 30px rgba(0,0,0,0.12);
+      --safe-bottom: env(safe-area-inset-bottom);
+      --safe-top: env(safe-area-inset-top);
     }
 
-    const today = new Date();
-    const tasks = items.map((t, i) => {
-      const end = parseDate(t["תאריך"]);
-      let start = addMonths(end, -DEFAULT_LEAD_MONTHS);
-      if (start > today) start = addMonths(today, -1);
-      const daysLeft = Math.ceil(daysBetween(today, end));
-      return {
-        id: i,
-        name: t["משימה"],
-        people: t["עובדים"],
-        start, end,
-        notes: t["הערות"] || "",
-        daysLeft,
-        colorClass: `c${(i % 5) + 1}`,
-        danger: daysLeft <= 30 && daysLeft >= 0
-      };
-    });
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior-y: none;
+    }
 
-    const minStart = startOfMonth(addMonths(tasks.reduce((a,t)=> t.start < a ? t.start : a, tasks[0].start), -1));
-    const maxEnd   = endOfMonth(addMonths(tasks.reduce((a,t)=> t.end   > a ? t.end   : a, tasks[0].end), 1));
-    const totalMonths = monthsBetween(minStart, maxEnd) + 1;
-    const months = Array.from({length: totalMonths}, (_,i) => addMonths(minStart, i));
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--gray-l); }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
 
-    const timelineStart = minStart;
-    const timelineEnd   = endOfMonth(maxEnd);
-    const totalSpanDays = daysBetween(timelineStart, timelineEnd);
-    const pctFromDate = d => (daysBetween(timelineStart, d) / totalSpanDays) * 100;
+    /* ═══════════════════════════════════════════════════
+       MOBILE TOP BAR (hidden on desktop)
+       ═══════════════════════════════════════════════════ */
+    .mobile-top-bar {
+      display: none;
+      position: sticky;
+      top: 0;
+      align-items: center;
+      gap: 0.7rem;
+      padding: 0.7rem 1rem;
+      padding-top: max(0.7rem, var(--safe-top));
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      z-index: 20;
+      box-shadow: var(--sh);
+    }
+    .hamburger {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: var(--gray-l);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .hamburger:active { background: var(--blue-l); }
+    .hamburger svg { width: 20px; height: 20px; color: var(--text); }
+    .mobile-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--blue);
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mobile-action {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--text2);
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: inherit;
+    }
+    .mobile-action.show { display: flex; }
+    .mobile-action:active { background: var(--red-l); color: var(--red); border-color: var(--red); }
 
-    const headerHTML = `
-      <div class="gantt-header">
-        <div class="gh-left">
-          <span class="label">Task / משימה</span>
-          <span class="label">${tasks.length} items</span>
+    /* ═══════════════════════════════════════════════════
+       SIDEBAR
+       ═══════════════════════════════════════════════════ */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: var(--side);
+      height: 100vh;
+      height: 100dvh;
+      background: var(--white);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 40;
+      overflow-y: auto;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .sidebar-logo {
+      padding: 1.5rem 1.3rem 1rem;
+      padding-top: max(1.5rem, var(--safe-top));
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .sidebar-logo > div { min-width: 0; }
+    .sidebar-logo h1 { font-size: 1.05rem; font-weight: 800; color: var(--blue); }
+    .sidebar-logo .sub { font-size: 0.7rem; color: var(--text3); margin-top: 0.15rem; }
+    .sidebar-close {
+      display: none;
+      width: 36px; height: 36px;
+      border: 1px solid var(--border);
+      background: var(--white);
+      border-radius: 9px;
+      cursor: pointer;
+      align-items: center; justify-content: center;
+      color: var(--text2);
+      flex-shrink: 0;
+    }
+    .sidebar-close:active { background: var(--gray-l); }
+    
+    .sidebar-section {
+      padding: 1rem 1.3rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-section label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+    .sidebar-section select, 
+    .sidebar-section input {
+      width: 100%;
+      font-family: 'Heebo';
+      font-size: 0.9rem;
+      padding: 0.7rem 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--text);
+      direction: rtl;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .sidebar-section select:focus, 
+    .sidebar-section input:focus {
+      outline: none;
+      border-color: var(--blue);
+      background: var(--white);
+    }
+    
+    .sidebar-kw {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.6rem;
+    }
+    .skw {
+      font-size: 0.75rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      background: var(--gray-l);
+      color: var(--text2);
+      cursor: pointer;
+      border: 1px solid transparent;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .skw:active { transform: scale(0.96); }
+    .skw:hover { border-color: var(--blue); color: var(--blue); }
+    .skw.active { background: var(--blue-l); color: var(--blue); border-color: var(--blue); font-weight: 600; }
+    .skw .cnt { opacity: 0.5; font-size: 0.62rem; margin-right: 0.2rem; font-family: 'IBM Plex Mono'; }
+    
+    .conn-list { max-height: 320px; overflow-y: auto; margin-top: 0.4rem; }
+    .conn-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.65rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.84rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      gap: 0.5rem;
+    }
+    .conn-item:hover {
+      background: var(--blue-l);
+      margin: 0 -1.3rem;
+      padding-right: 1.3rem;
+      padding-left: 1.3rem;
+    }
+    .conn-item > div:first-child { min-width: 0; flex: 1; }
+    .ci-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ci-kw { font-size: 0.7rem; color: var(--text3); margin-top: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ci-score {
+      font-family: 'IBM Plex Mono';
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .ci-s3 { background: var(--red-l); color: var(--red); }
+    .ci-s2 { background: var(--orange-l); color: var(--orange); }
+    .ci-s1 { background: var(--blue-l); color: var(--blue); }
+    
+    .conn-empty { font-size: 0.85rem; color: var(--text3); padding: 1.5rem 0.5rem; text-align: center; }
+    .sidebar-clear {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      font-size: 0.75rem;
+      color: var(--blue);
+      cursor: pointer;
+      margin-top: 0.4rem;
+      font-weight: 600;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .sidebar-clear:hover { background: var(--blue-l); }
+
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(2px);
+      z-index: 35;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .sidebar-backdrop.open {
+      display: block;
+      opacity: 1;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       MAIN LAYOUT
+       ═══════════════════════════════════════════════════ */
+    .main {
+      margin-right: var(--side);
+      padding: 0 2rem 3rem;
+      min-height: 100vh;
+    }
+    
+    .tabs-bar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--bg);
+      padding: 1.2rem 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 1.5rem;
+      gap: 1rem;
+    }
+    .tabs { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      padding: 0.7rem 1.4rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text3);
+      cursor: pointer;
+      position: relative;
+      border: none;
+      background: none;
+      font-family: 'Heebo';
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      transition: color 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .tab:hover { color: var(--text2); }
+    .tab.active { color: var(--blue); }
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      right: 0;
+      left: 0;
+      height: 2px;
+      background: var(--blue);
+      border-radius: 2px 2px 0 0;
+    }
+    .tab .tab-count {
+      font-family: 'IBM Plex Mono';
+      font-size: 0.66rem;
+      font-weight: 600;
+      background: var(--gray-l);
+      color: var(--text3);
+      padding: 0.1rem 0.4rem;
+      border-radius: 99px;
+    }
+    .tab.active .tab-count { background: var(--blue-l); color: var(--blue); }
+    
+    .tabs-date { font-size: 0.78rem; color: var(--text3); font-family: 'IBM Plex Mono'; white-space: nowrap; }
+    .tab-content { display: none; animation: fadeIn 0.3s ease; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* ═══════════════════════════════════════════════════
+       CARDS & STATS
+       ═══════════════════════════════════════════════════ */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.3rem;
+      box-shadow: var(--sh);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .stat:hover { transform: translateY(-2px); box-shadow: var(--sh-md); }
+    .stat::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      left: 0;
+      height: 3px;
+    }
+    .stat:nth-child(1)::after { background: var(--blue); }
+    .stat:nth-child(2)::after { background: var(--green); }
+    .stat:nth-child(3)::after { background: var(--orange); }
+    .stat:nth-child(4)::after { background: var(--red); }
+    
+    .s-num { font-family: 'IBM Plex Mono'; font-size: 1.8rem; font-weight: 600; line-height: 1; }
+    .stat:nth-child(1) .s-num { color: var(--blue); }
+    .stat:nth-child(2) .s-num { color: var(--green); }
+    .stat:nth-child(3) .s-num { color: var(--orange); }
+    .stat:nth-child(4) .s-num { color: var(--red); }
+    .s-label { font-size: 0.78rem; color: var(--text3); margin-top: 0.4rem; font-weight: 500; }
+    
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--sh);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    .card-head {
+      padding: 1rem 1.3rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+    .card-head h3 { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 0.55rem; }
+    
+    .ch-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    .ch-icon.blue { background: var(--blue-l); }
+    .ch-icon.green { background: var(--green-l); }
+    .ch-icon.purple { background: var(--purple-l); }
+    .ch-icon.orange { background: var(--orange-l); }
+    .ch-icon.cyan { background: var(--cyan-l); }
+    .ch-icon.pink { background: var(--pink-l); }
+    .ch-icon.teal { background: var(--teal-l); }
+    .ch-icon.indigo { background: var(--indigo-l); }
+    
+    .card-body { padding: 1.3rem; }
+    
+    /* Bars */
+    .sbar { margin-bottom: 1rem; }
+    .sbar:last-child { margin-bottom: 0; }
+    .sbar-top { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.4rem; gap: 0.5rem; }
+    .sbar-name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sbar-val { font-family: 'IBM Plex Mono'; font-weight: 500; color: var(--text2); flex-shrink: 0; font-size: 0.78rem; }
+    .sbar-track { height: 8px; background: var(--gray-l); border-radius: 99px; overflow: hidden; }
+    .sbar-fill { height: 100%; border-radius: 99px; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+    .sbar.clickable { cursor: pointer; padding: 0.4rem 0.5rem; margin: 0 -0.5rem 0.4rem; border-radius: 8px; transition: background 0.15s; }
+    .sbar.clickable:hover { background: var(--gray-l); }
+    .sbar.clickable:active { transform: scale(0.99); }
+    .sbar.clickable.active { background: var(--blue-l); }
+    
+    .mini-bars { display: flex; align-items: flex-end; gap: 6px; height: 130px; padding-top: 14px; }
+    .mini-bar-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      height: 100%;
+      justify-content: flex-end;
+      cursor: pointer;
+      min-width: 0;
+      transition: transform 0.15s;
+    }
+    .mini-bar-col:active { transform: scale(0.95); }
+    .mini-bar { width: 100%; border-radius: 5px 5px 0 0; min-height: 4px; transition: opacity 0.2s; }
+    .mini-bar-col:hover .mini-bar { opacity: 0.85; }
+    .mini-bar-label { font-size: 0.62rem; color: var(--text3); text-align: center; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 0 1px; }
+    .mini-bar-val { font-family: 'IBM Plex Mono'; font-size: 0.66rem; color: var(--text2); font-weight: 600; }
+    
+    #netCanvas { width: 100%; height: 420px; border-radius: 10px; background: #fafbfe; cursor: grab; touch-action: none; }
+    .net-legend, .gantt-legend { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 0.8rem; }
+    .net-leg { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--text3); }
+    .net-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    .tbl-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem; }
+    .tbl-top h3 { font-size: 1.1rem; font-weight: 700; }
+    .tbl-filters { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+    .tbl-filters select, .tbl-filters input {
+      font-family: 'Heebo'; font-size: 0.82rem; padding: 0.55rem 0.7rem; border: 1px solid var(--border); border-radius: 9px; background: var(--white); color: var(--text); direction: rtl; min-width: 120px;
+      transition: border-color 0.15s;
+    }
+    .tbl-filters select:focus, .tbl-filters input:focus {
+      outline: none; border-color: var(--blue);
+    }
+    .tbl-card { background: var(--white); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--sh); overflow: hidden; }
+    .tbl-wrap { overflow-x: auto; max-height: calc(100vh - 180px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    thead { position: sticky; top: 0; z-index: 2; }
+    th { background: var(--gray-l); padding: 0.75rem 1rem; text-align: right; font-weight: 600; font-size: 0.76rem; color: var(--text3); text-transform: uppercase; border-bottom: 2px solid var(--border); white-space: nowrap; }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tbody tr { cursor: pointer; transition: background 0.12s; }
+    tbody tr:hover { background: var(--blue-l); }
+    tbody tr.hl { background: #eff6ff; }
+    
+    .badge { display: inline-block; padding: 0.22rem 0.65rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+    .b-prod { background: var(--green-l); color: var(--green); }
+    .b-done { background: var(--blue-l); color: var(--blue); }
+    .b-hold { background: var(--orange-l); color: var(--orange); }
+    .b-old { background: var(--gray-l); color: var(--gray); }
+    .b-files { background: var(--indigo-l); color: var(--indigo); font-family: 'IBM Plex Mono'; }
+    .b-nofiles { background: var(--gray-l); color: var(--text3); }
+
+    /* ═══════════════════════════════════════════════════
+       MOBILE TABLE — CARD LIST FALLBACK
+       ═══════════════════════════════════════════════════ */
+    .mob-card-list { display: none; }
+    .mob-pcard {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem 1rem;
+      margin-bottom: 0.7rem;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.15s, background 0.15s;
+      box-shadow: var(--sh);
+    }
+    .mob-pcard:active { transform: scale(0.99); }
+    .mob-pcard.hl { border-color: var(--blue); background: var(--blue-l); }
+    .mob-pcard-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .mob-pcard-name { font-weight: 700; font-size: 0.95rem; line-height: 1.3; flex: 1; min-width: 0; }
+    .mob-pcard-head .badge { flex-shrink: 0; }
+    .mob-pcard-desc { font-size: 0.78rem; color: var(--text2); margin-bottom: 0.6rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .mob-pcard-meta { display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem; font-size: 0.72rem; color: var(--text3); align-items: center; }
+    .mob-pcard-meta b { font-weight: 600; color: var(--text); }
+    .mob-pcard-meta .sep { width: 3px; height: 3px; background: var(--text3); border-radius: 50%; }
+    .mob-pcard-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px dashed var(--border); font-size: 0.72rem; color: var(--text3); }
+    .mob-pcard-dates { font-family: 'IBM Plex Mono'; font-size: 0.72rem; }
+
+    .people-tabs { display: flex; gap: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+    .people-tabs::-webkit-scrollbar { display: none; }
+    .ptab { padding: 0.5rem 0.95rem; font-size: 0.76rem; font-weight: 600; color: var(--text3); cursor: pointer; border: 1px solid var(--border); background: var(--white); font-family: 'Heebo'; border-radius: 0; transition: all 0.15s; flex-shrink: 0; white-space: nowrap; }
+    .ptab:first-child { border-radius: 0 8px 8px 0; }
+    .ptab:last-child { border-radius: 8px 0 0 8px; }
+    .ptab:hover { color: var(--text2); background: var(--gray-l); }
+    .ptab.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+    .gantt-container { display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; max-height: 460px; }
+    .gantt-labels { min-width: 160px; width: 160px; background: var(--gray-l); border-left: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; }
+    .gantt-labels::-webkit-scrollbar { display: none; }
+    .gl-header { height: 40px; display: flex; align-items: center; padding: 0 0.7rem; font-size: 0.72rem; font-weight: 600; color: var(--text3); border-bottom: 2px solid var(--border); background: var(--white); }
+    .gl-row { height: 30px; display: flex; align-items: center; padding: 0 0.7rem; font-size: 0.76rem; font-weight: 600; border-bottom: 1px solid #eef1f5; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background 0.12s; }
+    .gl-row:hover, .gl-row.active { background: var(--blue-l); }
+    .gl-status { width: 7px; height: 7px; border-radius: 50%; margin-left: 0.4rem; flex-shrink: 0; }
+    
+    .gantt-timeline-wrap { flex: 1; overflow: auto; position: relative; -webkit-overflow-scrolling: touch; }
+    .gantt-timeline { position: relative; }
+    .gantt-cols { display: flex; height: 40px; border-bottom: 2px solid var(--border); position: sticky; top: 0; background: var(--white); z-index: 2; }
+    .gcol { display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: var(--text2); border-left: 1px solid var(--border); flex-shrink: 0; cursor: pointer; transition: background 0.15s; user-select: none; }
+    .gcol:hover { background: var(--blue-l); color: var(--blue); }
+    .gcol.now-col { background: var(--red-l); color: var(--red); }
+    .gcol.active-col { background: var(--blue-l); color: var(--blue); font-weight: 800; }
+    .gcol-month { font-size: 0.66rem; font-weight: 600; color: var(--text3); cursor: default; }
+    .gcol-month.now-col { background: var(--red-l); color: var(--red); }
+    
+    .gantt-rows { position: relative; }
+    .gr { height: 30px; display: flex; align-items: center; border-bottom: 1px solid #f3f4f8; position: relative; }
+    .gr-stripe { position: absolute; top: 0; bottom: 0; border-left: 1px solid #f3f4f8; }
+    .gantt-bar { position: absolute; height: 18px; top: 6px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; padding: 0 5px; font-size: 0.6rem; font-weight: 600; color: #fff; overflow: hidden; white-space: nowrap; transition: filter 0.15s, opacity 0.2s, transform 0.1s; z-index: 1; }
+    .gantt-bar:hover { filter: brightness(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+    .gantt-bar:active { transform: scaleY(1.1); }
+    .gantt-bar.dim { opacity: 0.15; }
+    .gantt-now-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--red); z-index: 3; pointer-events: none; }
+    
+    .gantt-back-btn { display: inline-flex; align-items: center; gap: 0.3rem; font-family: 'Heebo'; font-size: 0.78rem; font-weight: 600; color: var(--blue); background: var(--blue-l); border: 1px solid var(--blue); border-radius: 8px; padding: 0.4rem 0.85rem; cursor: pointer; transition: all 0.15s; }
+    .gantt-back-btn:hover { background: var(--blue); color: #fff; }
+    .gantt-back-btn:active { transform: scale(0.96); }
+    .gantt-view-label { font-size: 0.78rem; color: var(--text2); font-weight: 600; margin-right: 0.8rem; }
+    
+    .gantt-tip { position: fixed; z-index: 300; background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.9rem; box-shadow: var(--sh-lg); font-size: 0.78rem; max-width: 250px; opacity: 0; pointer-events: none; transition: opacity 0.12s; }
+    .gantt-tip.show { opacity: 1; }
+    .gt-name { font-weight: 700; margin-bottom: 0.15rem; }
+    .gt-dates { font-family: 'IBM Plex Mono'; font-size: 0.72rem; color: var(--text2); margin-bottom: 0.2rem; }
+    .gt-dur { font-size: 0.72rem; color: var(--text3); }
+    .gt-status { margin-top: 0.3rem; }
+
+    /* Time Stats & Other Canvas Elements */
+    .time-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .time-stat { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.2rem; box-shadow: var(--sh); position: relative; overflow: hidden; transition: transform 0.15s, box-shadow 0.15s; }
+    .time-stat:hover { transform: translateY(-2px); box-shadow: var(--sh-md); }
+    .time-stat::after { content: ''; position: absolute; bottom: 0; right: 0; left: 0; height: 3px; }
+    .time-stat:nth-child(1)::after { background: var(--green); }
+    .time-stat:nth-child(2)::after { background: var(--blue); }
+    .time-stat:nth-child(3)::after { background: var(--orange); }
+    .time-stat:nth-child(4)::after { background: var(--purple); }
+    
+    .ts-num { font-family: 'IBM Plex Mono'; font-size: 1.6rem; font-weight: 600; line-height: 1; }
+    .time-stat:nth-child(1) .ts-num { color: var(--green); }
+    .time-stat:nth-child(2) .ts-num { color: var(--blue); }
+    .time-stat:nth-child(3) .ts-num { color: var(--orange); }
+    .time-stat:nth-child(4) .ts-num { color: var(--purple); }
+    .ts-label { font-size: 0.75rem; color: var(--text3); margin-top: 0.35rem; font-weight: 500; }
+    
+    #monthlyCanvas { width: 100%; height: 200px; }
+    .dur-bar-row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.7rem; }
+    .dur-bar-name { width: 150px; min-width: 150px; font-size: 0.82rem; font-weight: 600; text-align: left; direction: rtl; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dur-bar-track { flex: 1; height: 22px; background: var(--gray-l); border-radius: 6px; overflow: hidden; min-width: 60px; }
+    .dur-bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-right: 8px; font-size: 0.7rem; font-weight: 600; color: #fff; transition: width 0.6s ease; }
+    .dur-bar-val { font-family: 'IBM Plex Mono'; font-size: 0.75rem; color: var(--text2); min-width: 60px; text-align: center; }
+    
+    /* TOOLTIPS & OVERLAYS */
+    .tip { position: fixed; z-index: 200; pointer-events: none; background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; box-shadow: var(--sh-lg); max-width: 260px; font-size: 0.8rem; opacity: 0; transition: opacity 0.12s; }
+    .tip.show { opacity: 1; }
+    .tip-name { font-weight: 700; margin-bottom: 0.2rem; }
+    .tip-desc { color: var(--text2); font-size: 0.74rem; margin-bottom: 0.35rem; line-height: 1.4; }
+    .tip-kw { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+    .tip-kw span { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 99px; background: var(--purple-l); color: var(--purple); }
+    
+    .net-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; background: rgba(248,249,252,0.97); backdrop-filter: blur(8px); display: flex; flex-direction: column; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    .net-overlay.open { opacity: 1; pointer-events: all; }
+    .net-overlay-head { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; padding-top: max(1rem, var(--safe-top)); border-bottom: 1px solid var(--border); background: var(--white); gap: 1rem; }
+    .net-overlay-head > div { min-width: 0; flex: 1; }
+    .net-overlay-head h2 { font-size: 1.15rem; font-weight: 800; color: var(--blue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .no-sub { font-size: 0.78rem; color: var(--text3); margin-top: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .net-close { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--white); cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; color: var(--text2); transition: background 0.2s ease; flex-shrink: 0; font-family: inherit; }
+    .net-close:hover { background: var(--red-l); color: var(--red); }
+    .net-close:active { transform: scale(0.94); }
+    
+    .net-overlay-body { flex: 1; position: relative; overflow: hidden; }
+    #fullNetCanvas { width: 100%; height: 100%; touch-action: none; }
+    .net-overlay-info { position: absolute; top: 1rem; right: 1.2rem; width: 290px; background: var(--white); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); overflow: hidden; max-height: calc(100% - 2rem); overflow-y: auto; }
+    .noi-head { padding: 0.95rem 1.1rem; border-bottom: 1px solid var(--border); background: var(--blue-l); }
+    .noi-head h3 { font-size: 0.95rem; font-weight: 700; color: var(--blue); }
+    .noi-sub { font-size: 0.74rem; color: var(--text2); margin-top: 0.15rem; line-height: 1.4; }
+    .noi-list { padding: 0.3rem 0; }
+    .noi-item { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1.1rem; border-bottom: 1px solid var(--border); font-size: 0.82rem; cursor: pointer; gap: 0.5rem; transition: background 0.12s; }
+    .noi-item > div:first-child { min-width: 0; flex: 1; }
+    .noi-item:last-child { border-bottom: none; }
+    .noi-item:hover { background: var(--blue-l); }
+    .noi-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .noi-kw { font-size: 0.7rem; color: var(--text3); margin-top: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .noi-score { font-family: 'IBM Plex Mono'; font-size: 0.72rem; font-weight: 600; padding: 0.18rem 0.55rem; border-radius: 999px; flex-shrink: 0; }
+    .overlay-legend { position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); display: flex; gap: 1rem; background: var(--white); padding: 0.55rem 1.2rem; border-radius: 999px; border: 1px solid var(--border); box-shadow: 0 2px 12px rgba(0,0,0,0.06); font-size: 0.72rem; flex-wrap: wrap; max-width: calc(100% - 2rem); justify-content: center; }
+    
+    /* Mobile info panel toggle button */
+    .overlay-info-toggle {
+      display: none;
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--white);
+      border: 1px solid var(--border);
+      box-shadow: var(--sh-md);
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 5;
+      font-size: 1.1rem;
+      color: var(--blue);
+      font-family: inherit;
+    }
+    
+    /* Person details modal */
+    .person-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 150; background: rgba(30,41,59,0.5); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; padding: 2rem; }
+    .person-modal.open { display: flex; animation: fadeIn 0.2s ease; }
+    .pm-content { background: var(--white); border-radius: 16px; max-width: 800px; width: 100%; max-height: 85vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2); animation: scaleIn 0.25s ease; }
+    @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .pm-head { padding: 1.3rem 1.6rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+    .pm-head > div { min-width: 0; flex: 1; }
+    .pm-head h2 { font-size: 1.2rem; font-weight: 800; color: var(--text); }
+    .pm-head .pm-role { font-size: 0.78rem; color: var(--text3); margin-top: 0.2rem; font-weight: 500; }
+    .pm-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.6rem; padding: 1.1rem 1.6rem; background: var(--bg); border-bottom: 1px solid var(--border); }
+    .pm-stat { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 0.85rem; }
+    .pm-stat-num { font-family: 'IBM Plex Mono'; font-size: 1.3rem; font-weight: 700; line-height: 1.1; }
+    .pm-stat-lbl { font-size: 0.68rem; color: var(--text3); margin-top: 0.2rem; }
+    .pm-body { padding: 1rem 1.6rem; overflow-y: auto; flex: 1; }
+    .pm-proj { padding: 0.8rem 0.9rem; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0.6rem; cursor: pointer; transition: all 0.15s; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    .pm-proj:hover { background: var(--blue-l); border-color: var(--blue); }
+    .pm-proj:active { transform: scale(0.99); }
+    .pm-proj-info { flex: 1; min-width: 0; }
+    .pm-proj-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .pm-proj-desc { font-size: 0.74rem; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pm-proj-meta { font-size: 0.7rem; color: var(--text3); font-family: 'IBM Plex Mono'; margin-top: 0.25rem; }
+
+    /* ═══════════════════════════════════════════════════
+       FILES ANALYTICS
+       ═══════════════════════════════════════════════════ */
+    .files-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media(max-width:1100px) { .files-grid { grid-template-columns: 1fr; } }
+
+    .uf-row {
+      display: grid; grid-template-columns: 22px 1fr auto; align-items: center;
+      gap: 0.7rem; padding: 0.65rem 0.5rem; border-radius: 8px;
+      cursor: pointer; transition: background 0.15s, transform 0.1s;
+    }
+    .uf-row:hover { background: var(--gray-l); }
+    .uf-row:active { transform: scale(0.99); }
+    .uf-rank {
+      font-family: 'IBM Plex Mono'; font-size: 0.78rem; font-weight: 700;
+      color: var(--text3); text-align: center;
+    }
+    .uf-mid { min-width: 0; }
+    .uf-name { font-weight: 700; font-size: 0.88rem; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .uf-bar-track { height: 6px; background: var(--gray-l); border-radius: 99px; overflow: hidden; }
+    .uf-bar-fill { height: 100%; border-radius: 99px; transition: width 0.8s ease; }
+    .uf-meta {
+      font-family: 'IBM Plex Mono'; font-size: 0.78rem; font-weight: 700;
+      color: var(--text2); white-space: nowrap; text-align: left; min-width: 70px;
+    }
+    .uf-meta-sub { font-size: 0.62rem; color: var(--text3); font-weight: 500; }
+
+    .ext-row {
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.45rem 0.3rem; font-size: 0.82rem;
+    }
+    .ext-icon { font-size: 1.05rem; flex-shrink: 0; }
+    .ext-name {
+      font-family: 'IBM Plex Mono'; font-weight: 600;
+      width: 55px; flex-shrink: 0; color: var(--text);
+    }
+    .ext-bar-track { flex: 1; height: 6px; background: var(--gray-l); border-radius: 99px; overflow: hidden; }
+    .ext-bar-fill { height: 100%; background: var(--indigo); border-radius: 99px; }
+    .ext-count {
+      font-family: 'IBM Plex Mono'; font-size: 0.76rem; font-weight: 600;
+      color: var(--text2); min-width: 35px; text-align: left;
+    }
+    .files-empty {
+      padding: 2rem 1rem; text-align: center; color: var(--text3); font-size: 0.85rem;
+    }
+    .noi-count {
+      font-family: 'IBM Plex Mono'; font-size: 0.7rem;
+      background: var(--gray-l); padding: 0.18rem 0.55rem;
+      border-radius: 99px; color: var(--text3); font-weight: 600;
+    }
+
+    /* Files panel inside overlay info sidebar */
+    .noi-files { border-top: 2px solid var(--border); }
+    .noi-folder {
+      padding: 0.6rem 1.1rem; font-size: 0.72rem; color: var(--text2);
+      font-family: 'IBM Plex Mono'; background: var(--gray-l);
+      direction: ltr; text-align: right; word-break: break-all;
+    }
+    .noi-files-section { padding: 0.6rem 1.1rem; border-top: 1px solid var(--border); }
+    .noi-files-section h4 {
+      font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .noi-file {
+      display: flex; align-items: center; gap: 0.45rem;
+      padding: 0.32rem 0; font-size: 0.74rem;
+    }
+    .noi-fext { font-size: 0.85rem; flex-shrink: 0; }
+    .noi-fname {
+      flex: 1; min-width: 0; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; color: var(--text);
+      direction: ltr; text-align: right;
+    }
+    .noi-fsize {
+      font-family: 'IBM Plex Mono'; font-size: 0.68rem;
+      color: var(--text3); flex-shrink: 0;
+    }
+    .noi-more { font-size: 0.7rem; color: var(--text3); padding-top: 0.3rem; font-style: italic; }
+    .noi-empty { font-size: 0.8rem; color: var(--text3); padding: 0.7rem 1.1rem; font-style: italic; }
+    
+    /* ═══════════════════════════════════════════════════
+       MOBILE BOTTOM NAVIGATION (≤860px)
+       ═══════════════════════════════════════════════════ */
+    .mobile-bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      z-index: 25;
+      padding: 0.4rem 0.4rem;
+      padding-bottom: max(0.4rem, var(--safe-bottom));
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+    }
+    .mobile-bottom-nav .mtab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.15rem;
+      padding: 0.5rem 0.25rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      font-family: 'Heebo';
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: var(--text3);
+      border-radius: 10px;
+      transition: background 0.15s, color 0.15s;
+      min-height: 52px;
+      position: relative;
+    }
+    .mobile-bottom-nav .mtab:active { background: var(--gray-l); }
+    .mobile-bottom-nav .mtab.active { color: var(--blue); }
+    .mobile-bottom-nav .mtab.active::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 28px;
+      height: 3px;
+      background: var(--blue);
+      border-radius: 0 0 3px 3px;
+    }
+    .mobile-bottom-nav .mtab .mtab-icon { font-size: 1.25rem; line-height: 1; }
+    .mobile-bottom-nav .mtab .mtab-count {
+      position: absolute;
+      top: 4px;
+      right: calc(50% - 22px);
+      font-family: 'IBM Plex Mono';
+      font-size: 0.55rem;
+      font-weight: 700;
+      background: var(--blue);
+      color: #fff;
+      padding: 0.05rem 0.35rem;
+      border-radius: 99px;
+      min-width: 16px;
+      text-align: center;
+      display: none;
+    }
+    
+    /* ═══════════════════════════════════════════════════
+       RESPONSIVE BREAKPOINTS
+       ═══════════════════════════════════════════════════ */
+    @media(max-width:1250px) {
+      .tbl-filters select, .tbl-filters input { font-size: 0.78rem; padding: 0.45rem 0.55rem; min-width: 105px; }
+    }
+    @media(max-width:1100px) {
+      .stats { grid-template-columns: repeat(3, 1fr); }
+      .time-stats { grid-template-columns: repeat(2, 1fr); }
+      .grid2 { grid-template-columns: 1fr; }
+      .pm-stats { grid-template-columns: repeat(3, 1fr); }
+      :root { --side: 240px; }
+      .main { padding: 0 1.5rem 3rem; }
+    }
+    
+    /* ═══════════ MOBILE ═══════════ */
+    @media(max-width:860px) {
+      :root { --side: 88vw; }
+      
+      body { padding-bottom: var(--bottomnav-h); padding-bottom: calc(var(--bottomnav-h) + var(--safe-bottom)); }
+      
+      .mobile-top-bar { display: flex; }
+      .sidebar-close { display: flex; }
+      .mobile-bottom-nav { display: flex; }
+      
+      /* Convert sidebar to drawer */
+      .sidebar {
+        max-width: 340px;
+        transform: translateX(100%);
+        box-shadow: -8px 0 32px rgba(0,0,0,0.18);
+        border-left: none;
+      }
+      .sidebar.open { transform: translateX(0); }
+      
+      .main {
+        margin-right: 0;
+        padding: 0.8rem 1rem 1rem;
+      }
+      
+      /* Hide top tabs - use bottom nav instead */
+      .tabs-bar {
+        display: none;
+      }
+      
+      .tab-content { padding-top: 0.2rem; }
+      
+      /* Stats: 2 columns */
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.7rem;
+        margin-bottom: 1rem;
+      }
+      .stat { padding: 0.95rem 1rem; }
+      .s-num { font-size: 1.5rem; }
+      .s-label { font-size: 0.74rem; }
+      
+      .time-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.7rem;
+      }
+      .time-stat { padding: 0.9rem 1rem; }
+      .ts-num { font-size: 1.4rem; }
+      
+      .pm-stats { grid-template-columns: repeat(2, 1fr); padding: 1rem 1.1rem; gap: 0.5rem; }
+      
+      /* Cards */
+      .card { border-radius: 12px; margin-bottom: 1rem; }
+      .card-head { padding: 0.85rem 1rem; }
+      .card-head h3 { font-size: 0.9rem; }
+      .card-body { padding: 1rem; }
+      .ch-icon { width: 26px; height: 26px; font-size: 0.85rem; }
+      
+      .grid2 { gap: 1rem; margin-bottom: 1rem; }
+      
+      /* Network canvas - smaller on mobile */
+      #netCanvas { height: 320px; }
+      
+      /* People tabs - horizontal scroll */
+      .people-tabs { width: 100%; }
+      .ptab { padding: 0.5rem 0.85rem; font-size: 0.74rem; }
+      
+      /* TABLE TAB — convert to cards */
+      .tbl-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.7rem;
+      }
+      .tbl-top h3 { font-size: 1rem; }
+      .tbl-filters {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+      }
+      .tbl-filters input,
+      .tbl-filters select {
+        min-width: 0;
+        width: 100%;
+        font-size: 0.84rem;
+        padding: 0.65rem 0.75rem;
+      }
+      .tbl-filters input { grid-column: span 2; }
+      
+      .tbl-card { background: transparent; border: none; box-shadow: none; }
+      .tbl-wrap { max-height: none; overflow: visible; }
+      .tbl-wrap table { display: none; }
+      .mob-card-list { display: block; }
+      
+      /* Gantt — wider labels on mobile */
+      .gantt-container { max-height: 380px; }
+      .gantt-labels { min-width: 130px; width: 130px; }
+      .gl-row { font-size: 0.72rem; padding: 0 0.5rem; }
+      
+      /* Modal */
+      .person-modal { padding: 0; align-items: flex-end; }
+      .pm-content {
+        max-height: 92vh;
+        max-height: 92dvh;
+        border-radius: 18px 18px 0 0;
+        animation: slideUp 0.3s ease;
+      }
+      @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+      .pm-head { padding: 1.1rem 1.2rem; }
+      .pm-head h2 { font-size: 1.1rem; }
+      .pm-body { padding: 0.8rem 1.2rem 1rem; }
+      
+      /* Network overlay full-screen */
+      .net-overlay-head { padding: 0.85rem 1rem; padding-top: max(0.85rem, var(--safe-top)); }
+      .net-overlay-head h2 { font-size: 1rem; }
+      .no-sub { font-size: 0.74rem; }
+      
+      .net-overlay-info {
+        position: absolute;
+        top: auto;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        max-height: 50vh;
+        max-height: 50dvh;
+        border-radius: 16px 16px 0 0;
+        transform: translateY(calc(100% - 60px));
+        transition: transform 0.3s ease;
+      }
+      .net-overlay-info.open { transform: translateY(0); }
+      .net-overlay-info::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        background: var(--text3);
+        border-radius: 2px;
+        margin: 0.5rem auto 0;
+        opacity: 0.4;
+      }
+      .overlay-info-toggle { display: flex; }
+      .overlay-legend { bottom: 0.7rem; padding: 0.45rem 0.85rem; font-size: 0.66rem; gap: 0.6rem; }
+      
+      /* Duration bars */
+      .dur-bar-name { width: 110px; min-width: 110px; font-size: 0.78rem; }
+      .dur-bar-val { font-size: 0.7rem; min-width: 50px; }
+      
+      /* Mini bars taller for touch */
+      .mini-bars { height: 150px; gap: 4px; padding-top: 18px; }
+      .mini-bar-label { font-size: 0.58rem; }
+      
+      /* Files tab */
+      .uf-row { padding: 0.7rem 0.4rem; gap: 0.55rem; }
+      .uf-name { font-size: 0.85rem; }
+      .uf-meta { font-size: 0.72rem; min-width: 0; }
+      
+      /* Tooltips disabled on touch */
+      .tip { display: none !important; }
+    }
+
+    @media(max-width:480px) {
+      .stats { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+      .stat { padding: 0.8rem 0.85rem; }
+      .s-num { font-size: 1.35rem; }
+      
+      .pm-stats { grid-template-columns: repeat(2, 1fr); }
+      .pm-stat-num { font-size: 1.15rem; }
+      
+      .tbl-filters { grid-template-columns: 1fr; }
+      .tbl-filters input { grid-column: 1; }
+      
+      .mobile-bottom-nav .mtab { font-size: 0.62rem; padding: 0.45rem 0.15rem; }
+      .mobile-bottom-nav .mtab .mtab-icon { font-size: 1.15rem; }
+      
+      .net-overlay-head { padding: 0.7rem 0.85rem; }
+      .net-overlay-head h2 { font-size: 0.95rem; }
+      
+      #monthlyCanvas { height: 180px; }
+    }
+    
+    /* Show full title only on desktop */
+    .desk-only { display: inline; }
+    .mob-only { display: none; }
+    @media(max-width:860px) {
+      .desk-only { display: none; }
+      .mob-only { display: inline; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Mobile top bar -->
+<div class="mobile-top-bar">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="פתח תפריט">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </button>
+  <div class="mobile-title">📊 דשבורד פרוייקטים</div>
+  <button class="mobile-action" id="mobClearBtn" onclick="clearFilter()" aria-label="נקה סינון">✕</button>
+</div>
+
+<!-- Sidebar backdrop (mobile only) -->
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div>
+      <h1>📊 דשבורד פרוייקטים</h1>
+      <div class="sub">ניתוח קשרים • מילות מפתח</div>
+    </div>
+    <button class="sidebar-close" onclick="toggleSidebar()" aria-label="סגור">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+  <div class="sidebar-section">
+    <label for="selProject">בחר פרוייקט</label>
+    <select id="selProject"><option value="">הכל</option></select>
+  </div>
+  <div class="sidebar-section">
+    <label for="searchBox">חיפוש</label>
+    <input type="text" id="searchBox" placeholder="שם, תיאור, מילת מפתח...">
+  </div>
+  <div class="sidebar-section">
+    <label>נושאים</label>
+    <div class="sidebar-kw" id="sidebarKW"></div>
+  </div>
+  <div class="sidebar-section" id="connPanel" style="display:none">
+    <label id="connLabel">קשרים</label>
+    <span class="sidebar-clear" onclick="clearFilter()">✕ נקה</span>
+    <div class="conn-list" id="connList"></div>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="tabs-bar">
+    <div class="tabs">
+      <button class="tab active" data-tab="overview" onclick="switchTab('overview')">
+        <span>📈</span>סקירה<span class="tab-count" id="tcO"></span>
+      </button>
+      <button class="tab" data-tab="timeline" onclick="switchTab('timeline')">
+        <span>📅</span>ציר זמן<span class="tab-count" id="tcT"></span>
+      </button>
+      <button class="tab" data-tab="files" onclick="switchTab('files')">
+        <span>📂</span>קבצים<span class="tab-count" id="tcF"></span>
+      </button>
+      <button class="tab" data-tab="table" onclick="switchTab('table')">
+        <span>📋</span>טבלה<span class="tab-count" id="tcTbl"></span>
+      </button>
+    </div>
+    <div class="tabs-date" id="dateLabel"></div>
+  </header>
+
+  <section class="tab-content active" id="tab-overview">
+    <div class="stats" id="statsRow"></div>
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <div class="card-head"><h3><span class="ch-icon green">●</span>סטטוס</h3></div>
+        <div class="card-body" id="statusBars"></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-head"><h3><span class="ch-icon purple">▤</span>מילות מפתח</h3></div>
+        <div class="card-body"><div class="mini-bars" id="kwBars"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3><span class="ch-icon blue">◉</span>רשת קשרים</h3></div>
+      <div class="card-body">
+        <canvas id="netCanvas"></canvas>
+        <div class="net-legend" id="netLegend"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ch-icon orange">◈</span>אנשים</h3>
+        <div class="people-tabs">
+          <button class="ptab active" data-pv="manager" onclick="setPeopleView('manager')">מנהל פרוייקט</button>
+          <button class="ptab" data-pv="manager_b" onclick="setPeopleView('manager_b')">מנהל ב'</button>
+          <button class="ptab" data-pv="developer" onclick="setPeopleView('developer')">מפתח</button>
+          <button class="ptab" data-pv="client_manager" onclick="setPeopleView('client_manager')">מנהל לקוחות</button>
+          <button class="ptab" data-pv="clients" onclick="setPeopleView('clients')">לקוחות</button>
         </div>
-        <div class="gh-right">
-          <div class="months" style="grid-template-columns: repeat(${totalMonths}, 1fr);">
-            ${months.map(m => {
-              const isCurrent = m.getFullYear() === today.getFullYear() && m.getMonth() === today.getMonth();
-              return `<div class="month ${isCurrent ? "is-current" : ""}">
-                <div class="m-name">${HE_MONTHS_SHORT[m.getMonth()]}</div>
-                <div class="m-year">${m.getFullYear()}</div>
-              </div>`;
-            }).join("")}
+      </div>
+      <div class="card-body" id="peopleBars"></div>
+    </div>
+  </section>
+
+  <section class="tab-content" id="tab-timeline">
+    <div class="time-stats" id="timeStats"></div>
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ch-icon cyan">◫</span>גנט — ציר זמן</h3>
+        <div id="ganttControls"></div>
+      </div>
+      <div class="card-body" style="padding:0" id="ganttBody"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3><span class="ch-icon pink">▥</span>פרוייקטים פתוחים לפי חודש</h3></div>
+      <div class="card-body"><canvas id="monthlyCanvas"></canvas></div>
+    </div>
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <div class="card-head"><h3><span class="ch-icon orange">⏱</span>משך (חודשים)</h3></div>
+        <div class="card-body" id="durationBars"></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-head"><h3><span class="ch-icon purple">📊</span>לפי שנה</h3></div>
+        <div class="card-body" id="yearBars"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab-content" id="tab-files">
+    <div class="stats" id="filesStatsRow"></div>
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ch-icon indigo">🏆</span>אחוז הפרוייקטים שיש להם קבצים</h3>
+        <span class="noi-count" id="filesUserCount"></span>
+      </div>
+      <div class="card-body" id="topUsersFiles"></div>
+    </div>
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <div class="card-head"><h3><span class="ch-icon teal">📁</span>פרוייקטים מובילים</h3></div>
+        <div class="card-body" id="topProjectsFiles"></div>
+      </div>
+      <div class="card" style="margin:0">
+        <div class="card-head"><h3><span class="ch-icon cyan">📑</span>סוגי קבצים</h3></div>
+        <div class="card-body" id="fileTypesBars"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h3><span class="ch-icon pink">⚠</span>פרוייקטים ללא נתונים</h3>
+        <span class="noi-count" id="noFilesCount"></span>
+      </div>
+      <div class="card-body" id="noFilesList"></div>
+    </div>
+  </section>
+
+  <section class="tab-content" id="tab-table">
+    <div class="tbl-top">
+      <h3>כל הפרוייקטים</h3>
+      <div class="tbl-filters">
+        <input type="text" id="tblSearch" placeholder="🔍 חיפוש...">
+        <select id="tblStatus"><option value="">כל הסטטוסים</option></select>
+        <select id="tblManager"><option value="">כל המנהלים</option></select>
+        <select id="tblManagerB"><option value="">כל האחראים</option></select>
+        <select id="tblDeveloper"><option value="">כל המפתחים</option></select>
+        <select id="tblClientManager"><option value="">כל מנהלי הלקוחות</option></select>
+        <select id="tblHasFiles">
+          <option value="">כל הפרוייקטים</option>
+          <option value="yes">עם קבצים</option>
+          <option value="no">ללא קבצים</option>
+        </select>
+      </div>
+    </div>
+    <div class="tbl-card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr id="tHead"></tr></thead>
+          <tbody id="tBody"></tbody>
+        </table>
+        <!-- Mobile card list -->
+        <div class="mob-card-list" id="mobCardList"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Mobile bottom navigation -->
+<nav class="mobile-bottom-nav">
+  <button class="mtab active" data-tab="overview" onclick="switchTab('overview')">
+    <span class="mtab-icon">📈</span>
+    <span>סקירה</span>
+  </button>
+  <button class="mtab" data-tab="timeline" onclick="switchTab('timeline')">
+    <span class="mtab-icon">📅</span>
+    <span>ציר זמן</span>
+  </button>
+  <button class="mtab" data-tab="files" onclick="switchTab('files')">
+    <span class="mtab-icon">📂</span>
+    <span>קבצים</span>
+  </button>
+  <button class="mtab" data-tab="table" onclick="switchTab('table')">
+    <span class="mtab-icon">📋</span>
+    <span>טבלה</span>
+  </button>
+</nav>
+
+<div class="net-overlay" id="netOverlay">
+  <div class="net-overlay-head">
+    <div>
+      <h2 id="overlayTitle"></h2>
+      <div class="no-sub" id="overlaySub"></div>
+    </div>
+    <button class="net-close" onclick="closeOverlay()" aria-label="סגור">✕</button>
+  </div>
+  <div class="net-overlay-body">
+    <canvas id="fullNetCanvas"></canvas>
+    <button class="overlay-info-toggle" id="overlayInfoToggle" onclick="toggleOverlayInfo()" aria-label="פרטים">ⓘ</button>
+    <div class="net-overlay-info" id="overlayInfo"></div>
+    <div class="overlay-legend" id="overlayLegend"></div>
+  </div>
+</div>
+
+<!-- Person details modal -->
+<div class="person-modal" id="personModal" onclick="if(event.target===this)closePersonModal()">
+  <div class="pm-content">
+    <div class="pm-head">
+      <div>
+        <h2 id="pmName"></h2>
+        <div class="pm-role" id="pmRole"></div>
+      </div>
+      <button class="net-close" onclick="closePersonModal()" aria-label="סגור">✕</button>
+    </div>
+    <div class="pm-stats" id="pmStats"></div>
+    <div class="pm-body" id="pmBody"></div>
+  </div>
+</div>
+
+<div class="tip" id="tip">
+  <div class="tip-name"></div>
+  <div class="tip-desc"></div>
+  <div class="tip-kw"></div>
+</div>
+
+<div class="gantt-tip" id="ganttTip">
+  <div class="gt-name"></div>
+  <div class="gt-dates"></div>
+  <div class="gt-dur"></div>
+  <div class="gt-status"></div>
+</div>
+
+<!-- Load data -->
+<script src="projects_full.js"></script>
+<script src="projects_files.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//   GLOBAL STATE & CONFIG
+// ════════════════════════════════════════════════════════════════
+let projectsData = [];
+let projectFiles = {};
+let projectFilesByUser = {};
+let selectedProject = null;
+let selectedKeyword = null;
+let activeTab = 'overview';
+let ganttYear = null;
+let isMobile = window.matchMedia('(max-width: 860px)').matches;
+
+const STATUS_COLORS = {
+  'בפרודקשן': '#10b981',
+  'בביצוע':   '#10b981',
+  'הושלם':    '#3b82f6',
+  'מושהה':    '#f59e0b',
+  'גרסה ישנה':'#94a3b8'
+};
+const BADGE_CLASSES = {
+  'בפרודקשן': 'b-prod',
+  'בביצוע':   'b-prod',
+  'הושלם':    'b-done',
+  'מושהה':    'b-hold',
+  'גרסה ישנה':'b-old'
+};
+const BAR_COLORS = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899','#06b6d4','#64748b','#6366f1','#14b8a6'];
+const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+const PEOPLE_ROLES = {
+  manager:        { field: 'manager',        label: 'מנהל פרוייקט',    color: 'var(--orange)' },
+  manager_b:      { field: 'manager_b',      label: 'מנהל פרוייקט ב',  color: 'var(--purple)' },
+  developer:      { field: 'developer',      label: 'מפתח',            color: 'var(--blue)' },
+  client_manager: { field: 'client_manager', label: 'מנהל לקוחות',     color: 'var(--teal)' },
+  clients:        { field: 'clients',        label: 'לקוחות',          color: 'var(--green)' }
+};
+
+// ════════════════════════════════════════════════════════════════
+//   UTILITIES
+// ════════════════════════════════════════════════════════════════
+function parseDate(s) {
+  if (!s) return null;
+  const p = s.split('/');
+  if (p.length === 3) {
+    const d = parseInt(p[0]);
+    const m = parseInt(p[1]) - 1;
+    const y = parseInt(p[2]);
+    return new Date(y < 100 ? 2000 + y : y, m, d);
+  }
+  return null;
+}
+
+function monthDiff(a, b) {
+  return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+}
+
+function fmtMonth(d) {
+  return d.toLocaleDateString('he-IL', { month: 'short', year: '2-digit' });
+}
+
+// ════════════════════════════════════════════════════════════════
+//   MOBILE: SIDEBAR DRAWER
+// ════════════════════════════════════════════════════════════════
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const bd = document.getElementById('sidebarBackdrop');
+  const open = sb.classList.toggle('open');
+  bd.classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('open');
+  if (!isAnyOverlayOpen()) document.body.style.overflow = '';
+}
+function isAnyOverlayOpen() {
+  return document.getElementById('netOverlay').classList.contains('open') ||
+         document.getElementById('personModal').classList.contains('open');
+}
+
+// ════════════════════════════════════════════════════════════════
+//   TAB SWITCHING
+// ════════════════════════════════════════════════════════════════
+function switchTab(t) {
+  activeTab = t;
+  // Update both desktop top tabs and mobile bottom nav
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === t));
+  document.querySelectorAll('.mtab').forEach(x => x.classList.toggle('active', x.dataset.tab === t));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-' + t));
+  
+  // Scroll to top on tab switch (mobile UX)
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  
+  if (t === 'overview') requestAnimationFrame(() => drawMiniNet());
+  if (t === 'timeline') {
+    buildGantt();
+    requestAnimationFrame(() => drawMonthlyChart());
+  }
+  if (t === 'files') buildFilesTab();
+}
+
+// ════════════════════════════════════════════════════════════════
+//   INITIALIZATION
+// ════════════════════════════════════════════════════════════════
+async function boot() {
+  try {
+    if (window.PROJECTS_DATA) {
+      projectsData = window.PROJECTS_DATA;
+    } else {
+      const r = await fetch('projects_full.json');
+      if (!r.ok) throw new Error("Network issue");
+      projectsData = await r.json();
+    }
+  } catch(err) {
+    document.querySelector('.main').innerHTML = `
+      <div style="padding:3rem 1rem;text-align:center;color:#94a3b8">
+        <h2 style="color:#ef4444;margin-bottom:0.5rem">⚠ שגיאה בטעינת נתונים</h2>
+        <p>לא ניתן לטעון את הנתונים. אנא ודא שאחד מהקבצים הבאים קיים ליד ה-HTML:</p>
+        <ul style="list-style:none;margin-top:1rem;font-family:'IBM Plex Mono';font-size:0.9rem">
+          <li>📄 projects_full.js (מומלץ — עובד על file://)</li>
+          <li>📄 projects_full.json (דורש שרת מקומי)</li>
+        </ul>
+        <p style="margin-top:1rem;font-size:0.8rem">פרטי שגיאה: ${err.message}</p>
+      </div>`;
+    return;
+  }
+  
+  projectsData.forEach(p => {
+    p._start = parseDate(p.start);
+    p._end = parseDate(p.end);
+    if (p.client_manager === undefined) p.client_manager = '';
+  });
+
+  if (window.PROJECT_FILES) {
+    projectFiles = window.PROJECT_FILES.by_project || {};
+    projectFilesByUser = window.PROJECT_FILES.users || {};
+    console.log(`Loaded files for ${Object.keys(projectFiles).length} projects`);
+  } else {
+    console.log('projects_files.js not loaded — file data will not be shown');
+  }
+  
+  document.getElementById('dateLabel').textContent = new Date().toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  ['tcO', 'tcT', 'tcF', 'tcTbl'].forEach(id => document.getElementById(id).textContent = projectsData.length);
+  
+  // Listen for viewport changes
+  window.matchMedia('(max-width: 860px)').addEventListener('change', e => {
+    isMobile = e.matches;
+    if (activeTab === 'overview') drawMiniNet();
+    if (activeTab === 'timeline') drawMonthlyChart();
+  });
+  
+  buildAll();
+}
+
+function buildAll() {
+  buildStats();
+  buildStatusBars();
+  buildKWBars();
+  buildPeopleBars();
+  buildSelectors();
+  buildSidebarKW();
+  buildTable();
+  drawMiniNet();
+  buildTimeline();
+}
+
+// ════════════════════════════════════════════════════════════════
+//   OVERVIEW TAB
+// ════════════════════════════════════════════════════════════════
+function buildStats() {
+  const s = {};
+  projectsData.forEach(p => s[p.status] = (s[p.status] || 0) + 1);
+  const activeCount = (s['בפרודקשן'] || 0) + (s['בביצוע'] || 0);
+  
+  const statsArray = [
+    { n: projectsData.length, l: 'סה״כ' },
+    { n: activeCount, l: isMobile ? 'פעילים' : 'בפרודקשן/בביצוע' },
+    { n: s['מושהה'] || 0, l: 'מושהים' },
+    { n: s['הושלם'] || 0, l: 'הושלמו' }
+  ];
+  
+  document.getElementById('statsRow').innerHTML = statsArray.map(c => `
+    <div class="stat">
+      <div class="s-num">${c.n}</div>
+      <div class="s-label">${c.l}</div>
+    </div>
+  `).join('');
+}
+
+function buildStatusBars() {
+  const s = {};
+  projectsData.forEach(p => s[p.status] = (s[p.status] || 0) + 1);
+  const mx = Math.max(...Object.values(s));
+  
+  document.getElementById('statusBars').innerHTML = Object.entries(s).map(([k, v]) => `
+    <div class="sbar">
+      <div class="sbar-top">
+        <span class="sbar-name">${k}</span>
+        <span class="sbar-val">${v} (${Math.round(v / projectsData.length * 100)}%)</span>
+      </div>
+      <div class="sbar-track">
+        <div class="sbar-fill" style="width:${v / mx * 100}%;background:${STATUS_COLORS[k] || '#94a3b8'}"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function buildKWBars() {
+  const f = {};
+  projectsData.forEach(p => p.keywords.forEach(k => f[k] = (f[k] || 0) + 1));
+  const sorted = Object.entries(f).sort((a, b) => b[1] - a[1]).slice(0, isMobile ? 7 : 10);
+  const mx = sorted[0] ? sorted[0][1] : 1;
+  
+  document.getElementById('kwBars').innerHTML = sorted.map(([k, v], i) => `
+    <div class="mini-bar-col" onclick="clickKW(${JSON.stringify(k).replace(/"/g, '&quot;')})">
+      <div class="mini-bar-val">${v}</div>
+      <div class="mini-bar" style="height:${v / mx * 85}%;background:${BAR_COLORS[i % BAR_COLORS.length]}"></div>
+      <div class="mini-bar-label" title="${k}">${k}</div>
+    </div>
+  `).join('');
+}
+
+let peopleView = 'manager';
+function buildPeopleBars() {
+  const role = PEOPLE_ROLES[peopleView];
+  const f = role.field;
+  const clr = role.color;
+  const s = {};
+  
+  projectsData.forEach(p => {
+    const v = p[f];
+    if (v && v !== 'אין') s[v] = (s[v] || 0) + 1;
+  });
+  
+  const values = Object.values(s);
+  const mx = values.length ? Math.max(...values) : 1;
+  
+  const html = Object.entries(s).sort((a, b) => b[1] - a[1]).map(([k, v]) => `
+    <div class="sbar clickable" onclick="openPersonModal('${peopleView}', ${JSON.stringify(k).replace(/"/g, '&quot;')})">
+      <div class="sbar-top">
+        <span class="sbar-name">${k}</span>
+        <span class="sbar-val">${v} פרוייקטים</span>
+      </div>
+      <div class="sbar-track">
+        <div class="sbar-fill" style="width:${v / mx * 100}%;background:${clr}"></div>
+      </div>
+    </div>
+  `).join('');
+  
+  document.getElementById('peopleBars').innerHTML = html || '<div class="conn-empty">אין נתונים</div>';
+}
+
+function setPeopleView(v) {
+  peopleView = v;
+  document.querySelectorAll('.ptab').forEach(t => {
+    t.classList.toggle('active', t.dataset.pv === v);
+  });
+  buildPeopleBars();
+}
+
+// ════════════════════════════════════════════════════════════════
+//   FILES ANALYTICS
+// ════════════════════════════════════════════════════════════════
+function getFileCount(fd) {
+  if (!fd) return 0;
+  return (fd.scripts ? fd.scripts.length : 0)
+       + (fd.documents ? fd.documents.length : 0)
+       + (fd.other ? fd.other.length : 0);
+}
+
+function getProjectFileCount(project) {
+  return getFileCount(getProjectFiles(project));
+}
+
+function getUserFileStats() {
+  const out = [];
+  Object.entries(projectFilesByUser).forEach(([user, data]) => {
+    let fileCount = 0;
+    let totalSize = 0;
+    let projectsWithFiles = 0;
+    const projects = data.projects || {};
+    const projectCount = Object.keys(projects).length;
+    
+    Object.values(projects).forEach(proj => {
+      const c = getFileCount(proj);
+      if (c > 0) projectsWithFiles++;
+      fileCount += c;
+      ['scripts', 'documents', 'other'].forEach(k => {
+        (proj[k] || []).forEach(f => totalSize += (f.size_bytes || 0));
+      });
+    });
+    
+    const pctWithFiles = projectCount > 0 ? (projectsWithFiles / projectCount) * 100 : 0;
+    out.push({ user, fileCount, projectCount, projectsWithFiles, totalSize, pctWithFiles });
+  });
+  return out.sort((a, b) =>
+    (b.pctWithFiles - a.pctWithFiles) || (b.fileCount - a.fileCount)
+  );
+}
+
+function getProjectFileStats() {
+  const out = [];
+  projectsData.forEach(p => {
+    const fd = getProjectFiles(p);
+    if (fd) {
+      out.push({
+        project: p,
+        fileCount: getFileCount(fd),
+        user: fd.user || ''
+      });
+    }
+  });
+  return out.sort((a, b) => b.fileCount - a.fileCount);
+}
+
+function getFileTypeStats() {
+  const out = {};
+  Object.values(projectFilesByUser).forEach(data => {
+    Object.values(data.projects || {}).forEach(proj => {
+      ['scripts', 'documents', 'other'].forEach(k => {
+        (proj[k] || []).forEach(f => {
+          const ext = (f.extension || 'אחר').toLowerCase();
+          out[ext] = (out[ext] || 0) + 1;
+        });
+      });
+    });
+  });
+  return out;
+}
+
+function fmtBigSize(bytes) {
+  if (!bytes) return '0';
+  if (bytes < 1024) return bytes + 'B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + 'K';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + 'M';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + 'G';
+}
+
+function buildFilesTab() {
+  if (!window.PROJECT_FILES) {
+    document.getElementById('tab-files').innerHTML = `
+      <div class="card">
+        <div class="card-body">
+          <div class="files-empty">
+            <h3 style="font-size:1.1rem;margin-bottom:0.5rem;color:var(--red)">⚠ projects_files.js לא נטען</h3>
+            <p style="font-size:0.85rem;color:var(--text2)">ודא שהקובץ <code style="font-family:'IBM Plex Mono'">projects_files.js</code> קיים ליד ה-HTML.</p>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const userStats = getUserFileStats();
+  const projStats = getProjectFileStats();
+  const typeStats = getFileTypeStats();
+
+  const totalFiles = userStats.reduce((a, u) => a + u.fileCount, 0);
+  const totalUsers = userStats.length;
+  const totalSize = userStats.reduce((a, u) => a + u.totalSize, 0);
+  const projsWithFiles = projStats.filter(p => p.fileCount > 0).length;
+
+  const statsArr = [
+    { n: totalFiles.toLocaleString('en-US'), l: 'סה״כ קבצים' },
+    { n: totalUsers, l: isMobile ? 'משתמשים' : 'משתמשים עם נתונים' },
+    { n: projsWithFiles, l: isMobile ? 'עם קבצים' : 'פרוייקטים עם קבצים' },
+    { n: fmtBigSize(totalSize), l: 'גודל כולל' }
+  ];
+  document.getElementById('filesStatsRow').innerHTML = statsArr.map(c => `
+    <div class="stat">
+      <div class="s-num">${c.n}</div>
+      <div class="s-label">${c.l}</div>
+    </div>`).join('');
+
+  document.getElementById('filesUserCount').textContent = `${userStats.length} משתמשים`;
+  
+  if (!userStats.length) {
+    document.getElementById('topUsersFiles').innerHTML = '<div class="files-empty">אין נתוני משתמשים</div>';
+  } else {
+    document.getElementById('topUsersFiles').innerHTML = userStats.map((u, i) => {
+      const rank = i + 1;
+      const barW = u.pctWithFiles;
+      return `
+        <div class="uf-row" onclick="filterTableByUser('${u.user.replace(/'/g, "\\'")}')">
+          <div class="uf-rank">${rank}</div>
+          <div class="uf-mid">
+            <div class="uf-name">${u.user}</div>
+            <div class="uf-bar-track">
+              <div class="uf-bar-fill" style="width:${barW}%;background:${BAR_COLORS[i % BAR_COLORS.length]}"></div>
+            </div>
+          </div>
+          <div class="uf-meta">
+            <span style="color:var(--blue);font-weight:700">${u.pctWithFiles.toFixed(0)}%</span>
+            <span style="color:var(--text3);margin-right:0.3rem">(${u.projectsWithFiles} / ${u.projectCount})</span>
+            <div class="uf-meta-sub">${u.fileCount.toLocaleString('en-US')} קבצים • ${fmtBigSize(u.totalSize)}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  const topProj = projStats.filter(p => p.fileCount > 0).slice(0, 15);
+  const projMax = topProj[0] ? topProj[0].fileCount : 1;
+  
+  if (!topProj.length) {
+    document.getElementById('topProjectsFiles').innerHTML = '<div class="files-empty">אין פרוייקטים עם קבצים</div>';
+  } else {
+    document.getElementById('topProjectsFiles').innerHTML = topProj.map(({ project, fileCount, user }) => `
+      <div class="sbar clickable" onclick="selectById('${project.id}')">
+        <div class="sbar-top">
+          <span class="sbar-name">${project.name}</span>
+          <span class="sbar-val">${fileCount}</span>
+        </div>
+        <div class="sbar-track">
+          <div class="sbar-fill" style="width:${fileCount / projMax * 100}%;background:var(--teal)"></div>
+        </div>
+        <div style="font-size:0.66rem;color:var(--text3);margin-top:0.25rem">${user}</div>
+      </div>`).join('');
+  }
+
+  const typesSorted = Object.entries(typeStats).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  const typeMax = typesSorted[0] ? typesSorted[0][1] : 1;
+  
+  if (!typesSorted.length) {
+    document.getElementById('fileTypesBars').innerHTML = '<div class="files-empty">אין נתוני סוגי קבצים</div>';
+  } else {
+    document.getElementById('fileTypesBars').innerHTML = typesSorted.map(([ext, count]) => `
+      <div class="ext-row">
+        <span class="ext-icon">${fileIcon(ext)}</span>
+        <span class="ext-name">${ext}</span>
+        <div class="ext-bar-track">
+          <div class="ext-bar-fill" style="width:${count / typeMax * 100}%"></div>
+        </div>
+        <span class="ext-count">${count.toLocaleString('en-US')}</span>
+      </div>`).join('');
+  }
+
+  const noFilesProjects = projectsData.filter(p => !getProjectFiles(p));
+  document.getElementById('noFilesCount').textContent = `${noFilesProjects.length} פרוייקטים`;
+  
+  if (!noFilesProjects.length) {
+    document.getElementById('noFilesList').innerHTML = '<div class="files-empty" style="color:var(--green)">✓ כל הפרוייקטים מקושרים לתיקייה</div>';
+  } else {
+    document.getElementById('noFilesList').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.5rem">
+        ${noFilesProjects.map(p => `
+          <div class="conn-item" style="padding:0.65rem 0.8rem;border:1px solid var(--border);border-radius:9px;background:var(--bg)" onclick="selectById('${p.id}')">
+            <div style="min-width:0;flex:1">
+              <div class="ci-name" style="font-size:0.84rem">${p.name}</div>
+              <div class="ci-kw">${p.responsible || p.manager || ''}</div>
+            </div>
+            <span class="badge ${BADGE_CLASSES[p.status] || 'b-old'}">${p.status}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+}
+
+function filterTableByUser(user) {
+  switchTab('table');
+  const fields = ['tblManager', 'tblManagerB', 'tblDeveloper', 'tblClientManager'];
+  for (const fid of fields) {
+    const sel = document.getElementById(fid);
+    const opt = Array.from(sel.options).find(o => o.value === user);
+    if (opt) {
+      fields.forEach(f => { document.getElementById(f).value = ''; });
+      sel.value = user;
+      buildTable();
+      return;
+    }
+  }
+  document.getElementById('tblHasFiles').value = 'yes';
+  buildTable();
+}
+
+// ════════════════════════════════════════════════════════════════
+//   PERSON DETAILS MODAL
+// ════════════════════════════════════════════════════════════════
+function openPersonModal(roleKey, personName) {
+  const role = PEOPLE_ROLES[roleKey];
+  const projects = projectsData.filter(p => p[role.field] === personName);
+  
+  document.getElementById('pmName').textContent = personName;
+  document.getElementById('pmRole').textContent = role.label;
+  
+  const statusCounts = {};
+  projects.forEach(p => statusCounts[p.status] = (statusCounts[p.status] || 0) + 1);
+  
+  const completed = projects.filter(p => p._end);
+  const totalMonths = completed.reduce((a, p) => a + Math.max(1, monthDiff(p._start, p._end)), 0);
+  const avgDuration = completed.length ? (totalMonths / completed.length).toFixed(1) : '—';
+  
+  const active = projects.filter(p => p.status === 'בפרודקשן' || p.status === 'בביצוע').length;
+  
+  let totalFiles = 0;
+  projects.forEach(p => totalFiles += getProjectFileCount(p));
+  
+  const stats = [
+    { n: projects.length, l: 'סה״כ' },
+    { n: active, l: 'פעילים' },
+    { n: statusCounts['הושלם'] || 0, l: 'הושלמו' },
+    { n: avgDuration, l: 'ממוצע חודשים' },
+    { n: totalFiles, l: 'סה״כ קבצים' }
+  ];
+  
+  document.getElementById('pmStats').innerHTML = stats.map(s => `
+    <div class="pm-stat">
+      <div class="pm-stat-num" style="color:${role.color}">${s.n}</div>
+      <div class="pm-stat-lbl">${s.l}</div>
+    </div>
+  `).join('');
+  
+  const sorted = [...projects].sort((a, b) => {
+    if (!a._start && !b._start) return 0;
+    if (!a._start) return 1;
+    if (!b._start) return -1;
+    return b._start - a._start;
+  });
+  
+  document.getElementById('pmBody').innerHTML = sorted.map(p => {
+    const fc = getProjectFileCount(p);
+    const fileBadge = fc > 0
+      ? `<span class="badge b-files">📂 ${fc}</span>`
+      : '';
+    return `
+      <div class="pm-proj" onclick="closePersonModal();selectById('${p.id}')">
+        <div class="pm-proj-info">
+          <div class="pm-proj-name">${p.name} ${fileBadge}</div>
+          <div class="pm-proj-desc">${p.description || ''}</div>
+          <div class="pm-proj-meta">${p.start || '—'} → ${p.end || 'פתוח'}</div>
+        </div>
+        <span class="badge ${BADGE_CLASSES[p.status] || 'b-old'}">${p.status}</span>
+      </div>`;
+  }).join('') || '<div class="conn-empty">אין פרוייקטים</div>';
+  
+  document.getElementById('personModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePersonModal() {
+  document.getElementById('personModal').classList.remove('open');
+  if (!isAnyOverlayOpen() && !document.getElementById('sidebar').classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//   SIDEBAR & FILTER LOGIC
+// ════════════════════════════════════════════════════════════════
+function buildSelectors() {
+  const ps = document.getElementById('selProject');
+  projectsData.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.id;
+    o.textContent = p.name;
+    ps.appendChild(o);
+  });
+  
+  ps.onchange = () => {
+    selectedProject = ps.value ? projectsData.find(x => x.id == ps.value) : null;
+    selectedKeyword = null;
+    applyFilters();
+  };
+  
+  const populateFilter = (id, field) => {
+    const el = document.getElementById(id);
+    [...new Set(projectsData.map(p => p[field]))].forEach(v => {
+      if(v && v !== 'אין') {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        el.appendChild(o);
+      }
+    });
+    el.onchange = () => buildTable();
+  };
+  
+  populateFilter('tblStatus', 'status');
+  populateFilter('tblManager', 'manager');
+  populateFilter('tblManagerB', 'manager_b');
+  populateFilter('tblDeveloper', 'developer');
+  populateFilter('tblClientManager', 'client_manager');
+  
+  document.getElementById('tblHasFiles').onchange = () => buildTable();
+  document.getElementById('tblSearch').oninput = () => buildTable();
+  
+  document.getElementById('searchBox').oninput = e => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) {
+      selectedProject = null;
+      selectedKeyword = null;
+    } else {
+      const match = projectsData.find(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q));
+      if (match) {
+        selectedProject = match;
+        selectedKeyword = null;
+        document.getElementById('selProject').value = match.id;
+      }
+    }
+    applyFilters();
+  };
+}
+
+function buildSidebarKW() {
+  const f = {};
+  projectsData.forEach(p => p.keywords.forEach(k => f[k] = (f[k] || 0) + 1));
+  
+  document.getElementById('sidebarKW').innerHTML = Object.entries(f).sort((a, b) => b[1] - a[1]).map(([k, v]) => `
+    <span class="skw" data-kw="${k}" onclick="clickKW(${JSON.stringify(k).replace(/"/g, '&quot;')})">
+      ${k}<span class="cnt">${v}</span>
+    </span>
+  `).join('');
+}
+
+function clickKW(kw) {
+  if (selectedKeyword === kw) {
+    selectedKeyword = null;
+  } else {
+    selectedKeyword = kw;
+    selectedProject = null;
+    document.getElementById('selProject').value = '';
+  }
+  applyFilters();
+}
+
+function clearFilter() {
+  selectedProject = null;
+  selectedKeyword = null;
+  document.getElementById('selProject').value = '';
+  document.getElementById('searchBox').value = '';
+  applyFilters();
+}
+
+function applyFilters() {
+  document.querySelectorAll('.skw').forEach(el => el.classList.toggle('active', el.dataset.kw === selectedKeyword));
+  buildConns();
+  buildTable();
+  
+  // Show/hide mobile clear button
+  const hasFilter = !!(selectedProject || selectedKeyword);
+  document.getElementById('mobClearBtn').classList.toggle('show', hasFilter);
+  
+  if (activeTab === 'overview') drawMiniNet();
+  if (selectedProject || selectedKeyword) openOverlay();
+  else closeOverlay();
+}
+
+function buildConns() {
+  const panel = document.getElementById('connPanel');
+  const list = document.getElementById('connList');
+  const label = document.getElementById('connLabel');
+  
+  if (selectedProject) {
+    panel.style.display = '';
+    label.textContent = `קשרים — ${selectedProject.name}`;
+    const sims = selectedProject.similar_projects || [];
+    
+    if (!sims.length) {
+      list.innerHTML = '<div class="conn-empty">אין קשרים</div>';
+      return;
+    }
+    
+    list.innerHTML = sims.map(s => `
+      <div class="conn-item" onclick="selectById('${s.project_id}')">
+        <div>
+          <div class="ci-name">${s.project_name}</div>
+          <div class="ci-kw">${s.shared_keywords.join(', ')}</div>
+        </div>
+        <span class="ci-score ${s.score >= 3 ? 'ci-s3' : s.score >= 2 ? 'ci-s2' : 'ci-s1'}">${s.score}</span>
+      </div>
+    `).join('');
+    
+  } else if (selectedKeyword) {
+    panel.style.display = '';
+    const rel = projectsData.filter(p => p.keywords.includes(selectedKeyword));
+    label.textContent = `"${selectedKeyword}" — ${rel.length}`;
+    
+    list.innerHTML = rel.map(p => `
+      <div class="conn-item" onclick="selectById('${p.id}')">
+        <div><div class="ci-name">${p.name}</div></div>
+        <span class="badge ${BADGE_CLASSES[p.status] || 'b-old'}">${p.status}</span>
+      </div>
+    `).join('');
+    
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function selectById(id) {
+  selectedProject = projectsData.find(p => p.id == id);
+  selectedKeyword = null;
+  document.getElementById('selProject').value = id;
+  // On mobile, close sidebar after selection for cleaner UX
+  if (isMobile) closeSidebar();
+  applyFilters();
+}
+
+// ════════════════════════════════════════════════════════════════
+//   TABLE TAB — DESKTOP TABLE + MOBILE CARDS
+// ════════════════════════════════════════════════════════════════
+function buildTable() {
+  const headers = ['#', 'שם', 'סטטוס', 'קבצים', 'מנהל', 'אחראי', 'מפתח', 'מנהל לקוחות', 'לקוח', 'התחלה', 'סיום', 'קשרים', 'תיאור'];
+  document.getElementById('tHead').innerHTML = headers.map(c => `<th>${c}</th>`).join('');
+  
+  const sf = document.getElementById('tblStatus').value;
+  const mf = document.getElementById('tblManager').value;
+  const mbf = document.getElementById('tblManagerB').value;
+  const df = document.getElementById('tblDeveloper').value;
+  const cmf = document.getElementById('tblClientManager').value;
+  const hff = document.getElementById('tblHasFiles').value;
+  const sq = document.getElementById('tblSearch').value.trim().toLowerCase();
+  
+  let rows = projectsData;
+  if (sf) rows = rows.filter(p => p.status === sf);
+  if (mf) rows = rows.filter(p => p.manager === mf);
+  if (mbf) rows = rows.filter(p => p.manager_b === mbf);
+  if (df) rows = rows.filter(p => p.developer === df);
+  if (cmf) rows = rows.filter(p => p.client_manager === cmf);
+  
+  if (hff === 'yes') rows = rows.filter(p => getProjectFileCount(p) > 0);
+  if (hff === 'no')  rows = rows.filter(p => getProjectFileCount(p) === 0);
+  
+  if (sq) rows = rows.filter(p => 
+    p.name.toLowerCase().includes(sq) || 
+    p.description.toLowerCase().includes(sq) || 
+    p.keywords.some(k => k.includes(sq))
+  );
+  
+  const hlIds = new Set();
+  if (selectedProject) {
+    hlIds.add(selectedProject.id);
+    (selectedProject.similar_projects || []).forEach(s => hlIds.add(s.project_id));
+  } else if (selectedKeyword) {
+    projectsData.forEach(p => {
+      if (p.keywords.includes(selectedKeyword)) hlIds.add(p.id);
+    });
+  }
+  
+  // Desktop table
+  document.getElementById('tBody').innerHTML = rows.map(p => {
+    const hl = (selectedProject || selectedKeyword) && hlIds.has(p.id) ? 'hl' : '';
+    const fc = getProjectFileCount(p);
+    const fileCell = fc > 0
+      ? `<span class="badge b-files">${fc}</span>`
+      : `<span class="badge b-nofiles">—</span>`;
+    return `
+      <tr class="${hl}" onclick="selectById('${p.id}')">
+        <td style="font-family:'IBM Plex Mono';color:var(--text3)">${p.id}</td>
+        <td style="font-weight:600">${p.name}</td>
+        <td><span class="badge ${BADGE_CLASSES[p.status] || 'b-old'}">${p.status}</span></td>
+        <td style="text-align:center">${fileCell}</td>
+        <td>${p.manager || ''}</td>
+        <td>${p.manager_b || ''}</td>
+        <td>${p.developer || ''}</td>
+        <td>${p.client_manager || ''}</td>
+        <td>${p.clients || ''}</td>
+        <td style="font-family:'IBM Plex Mono';font-size:0.76rem;color:var(--text2)">${p.start || ''}</td>
+        <td style="font-family:'IBM Plex Mono';font-size:0.76rem;color:var(--text2)">${p.end || ''}</td>
+        <td style="font-family:'IBM Plex Mono';text-align:center">${p.total_connections}</td>
+        <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text2)" title="${p.description}">${p.description}</td>
+      </tr>
+    `;
+  }).join('');
+  
+  // Mobile card view
+  document.getElementById('mobCardList').innerHTML = rows.map(p => {
+    const hl = (selectedProject || selectedKeyword) && hlIds.has(p.id) ? 'hl' : '';
+    const fc = getProjectFileCount(p);
+    const fileBadge = fc > 0 ? `<span class="badge b-files">📂 ${fc}</span>` : '';
+    
+    const meta = [];
+    if (p.manager) meta.push(`<span><b>מנהל:</b> ${p.manager}</span>`);
+    if (p.developer) meta.push(`<span><b>מפתח:</b> ${p.developer}</span>`);
+    if (p.clients) meta.push(`<span><b>לקוח:</b> ${p.clients}</span>`);
+    
+    return `
+      <div class="mob-pcard ${hl}" onclick="selectById('${p.id}')">
+        <div class="mob-pcard-head">
+          <div class="mob-pcard-name">${p.name}</div>
+          <div style="display:flex;gap:0.3rem;flex-shrink:0;flex-wrap:wrap">
+            ${fileBadge}
+            <span class="badge ${BADGE_CLASSES[p.status] || 'b-old'}">${p.status}</span>
+          </div>
+        </div>
+        ${p.description ? `<div class="mob-pcard-desc">${p.description}</div>` : ''}
+        ${meta.length ? `<div class="mob-pcard-meta">${meta.join('<span class="sep"></span>')}</div>` : ''}
+        <div class="mob-pcard-foot">
+          <span class="mob-pcard-dates">${p.start || '—'} → ${p.end || 'פתוח'}</span>
+          <span style="font-family:'IBM Plex Mono'">${p.total_connections} קשרים</span>
+        </div>
+      </div>`;
+  }).join('') || '<div class="conn-empty" style="padding:2rem 1rem">לא נמצאו פרוייקטים</div>';
+}
+
+// ════════════════════════════════════════════════════════════════
+//   TIMELINE / GANTT
+// ════════════════════════════════════════════════════════════════
+function buildTimeline() {
+  const now = new Date();
+  const wd = projectsData.filter(p => p._start);
+  const active = wd.filter(p => p._start <= now && (!p._end || p._end >= now) && (p.status === 'בפרודקשן' || p.status === 'בביצוע' || p.status === 'מושהה'));
+  const done = wd.filter(p => p.status === 'הושלם');
+  
+  const completedProjects = wd.filter(p => p._end);
+  const totalMonths = completedProjects.reduce((a, p) => a + Math.max(1, monthDiff(p._start, p._end)), 0);
+  const avg = completedProjects.length ? (totalMonths / completedProjects.length) : 0;
+  
+  const timeStatsArr = [
+    { n: active.length, l: 'פתוחים כעת' },
+    { n: done.length, l: 'הושלמו' },
+    { n: projectsData.filter(p => !p._end).length, l: 'ללא סיום' },
+    { n: avg.toFixed(1), l: 'ממוצע חודשים' }
+  ];
+  
+  document.getElementById('timeStats').innerHTML = timeStatsArr.map(c => `
+    <div class="time-stat">
+      <div class="ts-num">${c.n}</div>
+      <div class="ts-label">${c.l}</div>
+    </div>
+  `).join('');
+  
+  ganttYear = null;
+  buildGantt();
+  buildDurationBars(wd);
+  buildYearBars(wd);
+  requestAnimationFrame(() => drawMonthlyChart());
+}
+
+function buildGantt() {
+  const wd = projectsData.filter(p => p._start).sort((a, b) => a._start - b._start);
+  if (!wd.length) {
+    document.getElementById('ganttBody').innerHTML = '<div class="conn-empty" style="padding:2rem">אין נתוני תאריכים</div>';
+    return;
+  }
+  
+  if (ganttYear) {
+    buildGanttMonths(wd, ganttYear);
+  } else {
+    buildGanttYears(wd);
+  }
+}
+
+function buildGanttYears(wd) {
+  const now = new Date();
+  const allD = wd.flatMap(p => [p._start, p._end].filter(Boolean));
+  const minY = Math.min(...allD.map(d => d.getFullYear()));
+  const maxY = Math.max(...allD.map(d => d.getFullYear()), now.getFullYear());
+  
+  const years = [];
+  for (let y = minY; y <= maxY; y++) years.push(y);
+  
+  const colW = isMobile ? 70 : Math.max(80, 600 / years.length);
+  const totalW = years.length * colW;
+  const nowY = now.getFullYear();
+
+  document.getElementById('ganttControls').innerHTML = `<span class="gantt-view-label">${isMobile ? 'לחץ על שנה' : 'תצוגת שנים — לחץ על שנה לפירוט חודשי'}</span>`;
+
+  let labelsHTML = `<div class="gl-header">פרוייקט</div>`;
+  let colsHTML = years.map(y => `<div class="gcol${y === nowY ? ' now-col' : ''}" style="width:${colW}px;min-width:${colW}px" onclick="drillYear(${y})">${y}</div>`).join('');
+  let rowsHTML = '';
+
+  wd.forEach(p => {
+    const clr = STATUS_COLORS[p.status] || '#94a3b8';
+    labelsHTML += `
+      <div class="gl-row" data-gid="${p.id}" onmouseenter="ganttHL('${p.id}')" onmouseleave="ganttHL(null)" onclick="selectById('${p.id}')">
+        <div class="gl-status" style="background:${clr}"></div>${p.name}
+      </div>`;
+
+    const s = p._start;
+    const e = p._end || now;
+    const sYear = s.getFullYear(), sMonth = s.getMonth();
+    const eYear = e.getFullYear(), eMonth = e.getMonth();
+    
+    const startFrac = (sYear - minY) + (sMonth / 12);
+    const endFrac = (eYear - minY) + (eMonth + 1) / 12;
+    const rightPx = startFrac * colW;
+    const wPx = Math.max(6, (endFrac - startFrac) * colW);
+    const dur = Math.max(1, monthDiff(s, e));
+    
+    const stripes = years.map((_, i) => `<div class="gr-stripe" style="right:${i * colW}px"></div>`).join('');
+
+    rowsHTML += `
+      <div class="gr" data-gid="${p.id}" onmouseenter="ganttHL('${p.id}')" onmouseleave="ganttHL(null)">
+        <div style="position:absolute;top:0;bottom:0;left:0;right:0">${stripes}</div>
+        <div class="gantt-bar" style="right:${rightPx}px;width:${wPx}px;background:${clr}" 
+             data-pid="${p.id}" data-name="${p.name}" data-start="${p.start || ''}" 
+             data-end="${p.end || 'פתוח'}" data-dur="${dur}" data-status="${p.status}" 
+             onmouseenter="ganttTipShow(event,this)" onmouseleave="ganttTipHide()" onclick="selectById('${p.id}')">
+          ${wPx > 50 ? p.name : ''}
+        </div>
+      </div>`;
+  });
+
+  const nowFrac = (nowY - minY) + (now.getMonth() + now.getDate() / 30) / 12;
+  const nowPx = nowFrac * colW;
+
+  const legendHTML = Object.entries(STATUS_COLORS).map(([s, c]) => `
+    <div class="net-leg"><div class="net-dot" style="background:${c}"></div>${s}</div>
+  `).join('');
+
+  document.getElementById('ganttBody').innerHTML = `
+    <div class="gantt-container">
+      <div class="gantt-labels" id="ganttLabels">${labelsHTML}</div>
+      <div class="gantt-timeline-wrap" id="ganttScroll">
+        <div class="gantt-timeline" style="width:${totalW}px">
+          <div class="gantt-cols">${colsHTML}</div>
+          <div class="gantt-rows">
+            ${rowsHTML}
+            <div class="gantt-now-line" style="right:${nowPx}px"></div>
           </div>
         </div>
       </div>
-    `;
+    </div>
+    <div class="gantt-legend">
+      ${legendHTML}
+      <div class="net-leg"><div style="width:2px;height:12px;background:var(--red);border-radius:1px"></div>היום</div>
+    </div>`;
+    
+  syncGanttScroll();
+}
 
-    const rowsHTML = tasks.map((t, idx) => {
-      const leftPct  = pctFromDate(t.start);
-      const rightPct = pctFromDate(t.end);
-      const widthPct = rightPct - leftPct;
-      return `
-        <div class="row" data-id="${t.id}">
-          <div class="row-info">
-            <div class="task-name">${escapeHtml(t.name)}</div>
-            <div class="task-people">${escapeHtml(t.people)}</div>
-          </div>
-          <div class="track" style="--month-w:${100/totalMonths}%; height:64px;">
-            <div class="bar ${t.danger ? "danger" : t.colorClass}"
-                 data-id="${t.id}"
-                 style="right:${leftPct}%; width:${widthPct}%; animation-delay:${idx*120}ms;">
-              <div class="fill"></div>
-              <div class="label">
-                <span>${escapeHtml(t.name)}</span>
-                <span class="due">${fmtDateHe(t.end)}</span>
-              </div>
-            </div>
-          </div>
+function drillYear(year) {
+  ganttYear = year;
+  buildGantt();
+}
+
+function buildGanttMonths(wd, year) {
+  const now = new Date();
+  const colW = isMobile ? 50 : 60;
+  const totalW = 12 * colW;
+  const yStart = new Date(year, 0, 1);
+  const yEnd = new Date(year, 11, 31);
+
+  const filtered = wd.filter(p => {
+    const s = p._start, e = p._end || now;
+    return s <= yEnd && e >= yStart;
+  });
+
+  document.getElementById('ganttControls').innerHTML = `
+    <button class="gantt-back-btn" onclick="ganttYear=null;buildGantt()">← חזרה לשנים</button>
+    <span class="gantt-view-label">${year}</span>`;
+
+  let labelsHTML = `<div class="gl-header">פרוייקט</div>`;
+  let colsHTML = '';
+  for (let m = 0; m < 12; m++) {
+    const isNow = year === now.getFullYear() && m === now.getMonth();
+    const monthLabel = isMobile ? MONTH_NAMES[m].slice(0, 3) : MONTH_NAMES[m];
+    colsHTML += `<div class="gcol gcol-month${isNow ? ' now-col' : ''}" style="width:${colW}px;min-width:${colW}px">${monthLabel}</div>`;
+  }
+
+  let rowsHTML = '';
+  filtered.forEach(p => {
+    const clr = STATUS_COLORS[p.status] || '#94a3b8';
+    labelsHTML += `
+      <div class="gl-row" data-gid="${p.id}" onmouseenter="ganttHL('${p.id}')" onmouseleave="ganttHL(null)" onclick="selectById('${p.id}')">
+        <div class="gl-status" style="background:${clr}"></div>${p.name}
+      </div>`;
+
+    const s = p._start, e = p._end || now;
+    const cs = s < yStart ? yStart : s;
+    const ce = e > yEnd ? yEnd : e;
+    
+    const startMonth = cs.getMonth() + (cs.getDate() - 1) / 30;
+    const endMonth = ce.getMonth() + (ce.getDate()) / 30;
+    const rightPx = startMonth * colW;
+    const wPx = Math.max(6, (endMonth - startMonth) * colW);
+    const dur = Math.max(1, monthDiff(s, e));
+
+    const stripes = Array.from({length: 12}, (_, i) => `<div class="gr-stripe" style="right:${i * colW}px"></div>`).join('');
+
+    rowsHTML += `
+      <div class="gr" data-gid="${p.id}" onmouseenter="ganttHL('${p.id}')" onmouseleave="ganttHL(null)">
+        <div style="position:absolute;top:0;bottom:0;left:0;right:0">${stripes}</div>
+        <div class="gantt-bar" style="right:${rightPx}px;width:${wPx}px;background:${clr}" 
+             data-pid="${p.id}" data-name="${p.name}" data-start="${p.start || ''}" 
+             data-end="${p.end || 'פתוח'}" data-dur="${dur}" data-status="${p.status}" 
+             onmouseenter="ganttTipShow(event,this)" onmouseleave="ganttTipHide()" onclick="selectById('${p.id}')">
+          ${wPx > 45 ? p.name : ''}
         </div>
-      `;
-    }).join("");
+      </div>`;
+  });
 
-    const todayPct = pctFromDate(today);
-    const todayLineHTML = (today >= timelineStart && today <= timelineEnd)
-      ? `<div class="today-overlay">
-           <div class="today-line" style="right:${todayPct}%">
-             <div class="today-pill">
-               <span class="date">${fmtDateHe(today)}</span>
-               <span>היום</span>
-             </div>
-           </div>
-         </div>`
-      : "";
-
-    ganttEl.innerHTML = headerHTML + `<div class="gantt-body">${rowsHTML}${todayLineHTML}</div>`;
-
-    document.getElementById("stat-total").textContent  = tasks.length;
-    document.getElementById("stat-active").textContent = tasks.filter(t => t.daysLeft >= 0).length;
-    document.getElementById("stat-soon").textContent   = tasks.filter(t => t.daysLeft <= 30 && t.daysLeft >= 0).length;
-    document.getElementById("range-label").textContent =
-      `${HE_MONTHS_SHORT[timelineStart.getMonth()]} ${timelineStart.getFullYear()} ← ${HE_MONTHS_SHORT[timelineEnd.getMonth()]} ${timelineEnd.getFullYear()}`;
-    document.getElementById("updated").textContent = fmtDateHe(today);
-
-    loaderEl.style.display = "none";
-    ganttEl.style.display  = "block";
-    legendEl.style.display = "flex";
-
-    bindTooltips(tasks);
+  let nowLine = '';
+  if (year === now.getFullYear()) {
+    const nowFrac = now.getMonth() + (now.getDate() / 30);
+    nowLine = `<div class="gantt-now-line" style="right:${nowFrac * colW}px"></div>`;
   }
+  
+  const legendHTML = Object.entries(STATUS_COLORS).map(([s, c]) => `
+    <div class="net-leg"><div class="net-dot" style="background:${c}"></div>${s}</div>
+  `).join('');
 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c =>
-      ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  }
+  document.getElementById('ganttBody').innerHTML = `
+    <div class="gantt-container">
+      <div class="gantt-labels" id="ganttLabels">${labelsHTML}</div>
+      <div class="gantt-timeline-wrap" id="ganttScroll">
+        <div class="gantt-timeline" style="width:${totalW}px">
+          <div class="gantt-cols">${colsHTML}</div>
+          <div class="gantt-rows">${rowsHTML}${nowLine}</div>
+        </div>
+      </div>
+    </div>
+    <div class="gantt-legend">
+      ${legendHTML}
+      <div class="net-leg"><div style="width:2px;height:12px;background:var(--red);border-radius:1px"></div>היום</div>
+      <div class="net-leg" style="color:var(--text2);font-weight:600">${filtered.length} פרוייקטים ב-${year}</div>
+    </div>`;
+    
+  syncGanttScroll();
+}
 
-  function bindTooltips(tasks){
-    const tooltip = document.getElementById("tooltip");
-    document.querySelectorAll(".bar").forEach(bar => {
-      bar.addEventListener("mouseenter", e => showTooltip(e, bar, tasks, tooltip));
-      bar.addEventListener("mousemove",  e => moveTooltip(e, tooltip));
-      bar.addEventListener("mouseleave", () => tooltip.classList.remove("show"));
+function syncGanttScroll() {
+  const l = document.getElementById('ganttLabels'), s = document.getElementById('ganttScroll');
+  if (!l || !s) return;
+  s.onscroll = () => { l.scrollTop = s.scrollTop; };
+  l.onscroll = () => { s.scrollTop = l.scrollTop; };
+}
+
+function ganttHL(id) {
+  document.querySelectorAll('.gl-row').forEach(r => r.classList.toggle('active', r.dataset.gid === id));
+  document.querySelectorAll('.gantt-bar').forEach(b => {
+    if (id) b.classList.toggle('dim', b.dataset.pid !== id);
+    else b.classList.remove('dim');
+  });
+}
+
+function ganttTipShow(e, el) {
+  if (isMobile) return; // No hover tooltips on mobile
+  const t = document.getElementById('ganttTip');
+  t.querySelector('.gt-name').textContent = el.dataset.name;
+  t.querySelector('.gt-dates').textContent = `${el.dataset.start} → ${el.dataset.end}`;
+  t.querySelector('.gt-dur').textContent = `${el.dataset.dur} חודשים`;
+  t.querySelector('.gt-status').innerHTML = `<span class="badge ${BADGE_CLASSES[el.dataset.status] || 'b-old'}">${el.dataset.status}</span>`;
+  t.style.left = (e.clientX + 10) + 'px';
+  t.style.top = (e.clientY - 60) + 'px';
+  t.classList.add('show');
+}
+
+function ganttTipHide() {
+  document.getElementById('ganttTip').classList.remove('show');
+}
+
+function drawMonthlyChart() {
+  const cv = document.getElementById('monthlyCanvas');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = cv.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  
+  cv.width = W * dpr;
+  cv.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  
+  const wd = projectsData.filter(p => p._start);
+  if (!wd.length) return;
+  
+  const allD = wd.flatMap(p => [p._start, p._end].filter(Boolean));
+  let minD = new Date(Math.min(...allD));
+  let maxD = new Date(Math.max(...allD));
+  
+  minD = new Date(minD.getFullYear(), minD.getMonth(), 1);
+  maxD = new Date(maxD.getFullYear(), maxD.getMonth() + 1, 0);
+  
+  const totalM = monthDiff(minD, maxD) + 1;
+  const statuses = ['בפרודקשן', 'בביצוע', 'מושהה', 'הושלם', 'גרסה ישנה'];
+  const monthData = [];
+  
+  for (let i = 0; i < totalM; i++) {
+    const d = new Date(minD.getFullYear(), minD.getMonth() + i, 15);
+    const counts = {};
+    statuses.forEach(s => counts[s] = 0);
+    
+    wd.forEach(p => {
+      if (p._start <= d && (!p._end || p._end >= d)) {
+        counts[p.status] = (counts[p.status] || 0) + 1;
+      }
+    });
+    
+    monthData.push({
+      date: d,
+      counts: counts,
+      total: Object.values(counts).reduce((a, b) => a + b, 0)
     });
   }
-  function showTooltip(e, bar, tasks, tooltip){
-    const t = tasks[+bar.dataset.id];
-    const dueLabel = t.daysLeft < 0
-      ? `<span style="color:var(--accent-2)">חלף לפני ${Math.abs(t.daysLeft)} ימים</span>`
-      : t.daysLeft === 0
-        ? `<span style="color:var(--accent)">היום</span>`
-        : `<span style="color:${t.daysLeft<=30?"var(--accent-2)":"var(--ink-dim)"}">בעוד ${t.daysLeft} ימים</span>`;
-    tooltip.innerHTML = `
-      <div class="tt-title">${escapeHtml(t.name)}</div>
-      <div class="tt-row"><div class="tt-key">צוות</div><div class="tt-val">${escapeHtml(t.people)}</div></div>
-      <div class="tt-row"><div class="tt-key">התחלה</div><div class="tt-val">${fmtDateHe(t.start)}</div></div>
-      <div class="tt-row"><div class="tt-key">דדליין</div><div class="tt-val">${fmtDateHe(t.end)} · ${dueLabel}</div></div>
-      ${t.notes ? `<div class="tt-notes">${escapeHtml(t.notes)}</div>` : ""}
+  
+  const maxV = Math.max(...monthData.map(m => m.total), 1);
+  const pad = { t: 20, b: 30, r: 10, l: 30 };
+  const cW = W - pad.l - pad.r;
+  const cH = H - pad.t - pad.b;
+  const barW = Math.max(4, cW / totalM - 2);
+  
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = '#eef0f5';
+  ctx.lineWidth = 0.5;
+  
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + cH * (1 - i / 4);
+    ctx.beginPath();
+    ctx.moveTo(pad.l, y);
+    ctx.lineTo(W - pad.r, y);
+    ctx.stroke();
+    
+    ctx.font = '500 9px IBM Plex Mono';
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxV * i / 4), pad.l - 4, y + 3);
+  }
+  
+  monthData.forEach((m, i) => {
+    const x = pad.l + i * (cW / totalM);
+    let yOff = 0;
+    
+    statuses.forEach(s => {
+      const v = m.counts[s] || 0;
+      if (!v) return;
+      const h = (v / maxV) * cH;
+      
+      ctx.fillStyle = STATUS_COLORS[s] || '#94a3b8';
+      ctx.fillRect(x, pad.t + cH - yOff - h, barW, h);
+      yOff += h;
+    });
+    
+    const labelStep = isMobile ? 6 : 3;
+    if (i % labelStep === 0) {
+      ctx.font = '500 8px Heebo';
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'center';
+      ctx.fillText(fmtMonth(m.date), x + barW / 2, H - 8);
+    }
+  });
+}
+
+function buildDurationBars(data) {
+  const wb = data.filter(p => p._end)
+    .map(p => ({
+      name: p.name,
+      months: Math.max(1, monthDiff(p._start, p._end)),
+      status: p.status
+    }))
+    .sort((a, b) => b.months - a.months);
+    
+  const mx = Math.max(...wb.map(d => d.months), 1);
+  
+  document.getElementById('durationBars').innerHTML = wb.map(d => `
+    <div class="dur-bar-row">
+      <div class="dur-bar-name" title="${d.name}">${d.name}</div>
+      <div class="dur-bar-track">
+        <div class="dur-bar-fill" style="width:${d.months / mx * 100}%;background:${STATUS_COLORS[d.status] || '#94a3b8'}">
+          ${d.months > 3 ? d.months + '' : ''}
+        </div>
+      </div>
+      <div class="dur-bar-val">${d.months} חודשים</div>
+    </div>
+  `).join('');
+}
+
+function buildYearBars(data) {
+  const y = {};
+  data.forEach(p => {
+    const yr = p._start.getFullYear();
+    y[yr] = (y[yr] || 0) + 1;
+  });
+  
+  const mx = Math.max(...Object.values(y));
+  
+  document.getElementById('yearBars').innerHTML = Object.entries(y).sort((a, b) => a[0] - b[0]).map(([yr, v]) => `
+    <div class="sbar">
+      <div class="sbar-top">
+        <span class="sbar-name">${yr}</span>
+        <span class="sbar-val">${v}</span>
+      </div>
+      <div class="sbar-track">
+        <div class="sbar-fill" style="width:${v / mx * 100}%;background:var(--purple)"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════════════════════════════
+//   NETWORK CANVAS
+// ════════════════════════════════════════════════════════════════
+function getNetworkScale(count, W, H) {
+  let nr, fs, lo, rep, att, id, it;
+  if (count <= 3) {
+    nr = [30, 45]; fs = [14, 16]; lo = 22; rep = 2000; att = 0.003; id = 220; it = 120;
+  } else if (count <= 6) {
+    nr = [22, 34]; fs = [12, 14]; lo = 18; rep = 1500; att = 0.005; id = 180; it = 150;
+  } else if (count <= 10) {
+    nr = [16, 26]; fs = [10, 12]; lo = 16; rep = 1200; att = 0.006; id = 150; it = 180;
+  } else if (count <= 15) {
+    nr = [12, 20]; fs = [9, 11]; lo = 14; rep = 1000; att = 0.007; id = 120; it = 200;
+  } else {
+    nr = [8, 14]; fs = [7.5, 9]; lo = 12; rep = 800; att = 0.008; id = 90; it = 250;
+  }
+  
+  const scaleFactor = Math.min(1, Math.sqrt(W * H / 500000));
+  
+  return {
+    minR: nr[0] * scaleFactor,
+    maxR: nr[1] * scaleFactor,
+    fontNormal: fs[0],
+    fontHover: fs[1],
+    labelOffset: lo * scaleFactor,
+    repulsion: rep,
+    attraction: att,
+    idealDist: id * scaleFactor,
+    iterations: it,
+    edgeLabelSize: Math.max(8, 11 - count * 0.2),
+    kwLabelSize: Math.max(7, 9 - count * 0.15)
+  };
+}
+
+function buildEdges(srcData) {
+  const edges = [];
+  const seen = new Set();
+  
+  srcData.forEach(p => {
+    (p.similar_projects || []).forEach(x => {
+      const k = [p.id, x.project_id].sort().join('-');
+      if (!seen.has(k)) {
+        seen.add(k);
+        edges.push({ src: p.id, tgt: x.project_id, w: x.score, kw: x.shared_keywords });
+      }
+    });
+  });
+  return edges;
+}
+
+function layoutNodes(nodes, edges, W, H, scale, insetW) {
+  const nodeMap = {};
+  nodes.forEach(n => nodeMap[n.id] = n);
+  
+  const usableW = W - insetW;
+  const cx = usableW / 2;
+  const cy = H / 2;
+  const rad = Math.min(usableW, H) * 0.35;
+
+  nodes.forEach((n, i) => {
+    const angle = 2 * Math.PI * i / nodes.length - Math.PI / 2;
+    n.x = cx + Math.cos(angle) * rad;
+    n.y = cy + Math.sin(angle) * rad;
+    n.vx = 0;
+    n.vy = 0;
+  });
+
+  for (let s = 0; s < scale.iterations; s++) {
+    const alpha = 1 - s / scale.iterations;
+
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        let dx = nodes[j].x - nodes[i].x;
+        let dy = nodes[j].y - nodes[i].y;
+        let d = Math.sqrt(dx * dx + dy * dy) || 1;
+        const minDist = nodes[i].r + nodes[j].r + 20;
+        
+        let force = scale.repulsion * alpha / (d * d);
+        if (d < minDist) force *= 3;
+        
+        nodes[i].vx -= dx / d * force;
+        nodes[i].vy -= dy / d * force;
+        nodes[j].vx += dx / d * force;
+        nodes[j].vy += dy / d * force;
+      }
+    }
+
+    edges.forEach(e => {
+      const a = nodeMap[e.src];
+      const b = nodeMap[e.tgt];
+      if (!a || !b) return;
+      
+      let dx = b.x - a.x;
+      let dy = b.y - a.y;
+      let d = Math.sqrt(dx * dx + dy * dy) || 1;
+      
+      let force = (d - scale.idealDist) * scale.attraction * alpha * e.w;
+      a.vx += dx / d * force;
+      a.vy += dy / d * force;
+      b.vx -= dx / d * force;
+      b.vy -= dy / d * force;
+    });
+
+    nodes.forEach(n => {
+      n.vx += (cx - n.x) * 0.001 * alpha;
+      n.vy += (cy - n.y) * 0.001 * alpha;
+      n.x += n.vx;
+      n.y += n.vy;
+      n.vx *= 0.85;
+      n.vy *= 0.85;
+      
+      n.x = Math.max(n.r + 15, Math.min(usableW - n.r - 15, n.x));
+      n.y = Math.max(n.r + 15, Math.min(H - n.r - 15, n.y));
+    });
+  }
+}
+
+function renderGraph(ctx, W, H, nodes, edges, nodeMap, options) {
+  ctx.clearRect(0, 0, W, H);
+  const { scale, mainId, hoverN, showGrid, showEdgeKW } = options;
+  
+  if (showGrid) {
+    ctx.strokeStyle = '#eef0f5';
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x < W; x += 50) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 50) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  }
+
+  edges.forEach(e => {
+    const a = nodeMap[e.src];
+    const b = nodeMap[e.tgt];
+    if (!a || !b) return;
+    
+    const isMain = mainId && (e.src == mainId || e.tgt == mainId);
+    
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    
+    if (e.w >= 3) {
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = Math.min(5, 2 + e.w);
+      ctx.globalAlpha = isMain ? 1 : 0.7;
+    } else if (e.w >= 2) {
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = isMain ? 1 : 0.6;
+    } else {
+      ctx.strokeStyle = '#b0bec5';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.4;
+    }
+    
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    ctx.font = `700 ${scale.edgeLabelSize}px IBM Plex Mono`;
+    ctx.fillStyle = e.w >= 3 ? '#ef4444' : e.w >= 2 ? '#f59e0b' : '#94a3b8';
+    ctx.textAlign = 'center';
+    ctx.fillText(e.w, mx, my - 6);
+    
+    if (showEdgeKW && nodes.length <= 12) {
+      ctx.font = `400 ${scale.kwLabelSize}px Heebo`;
+      ctx.fillStyle = '#78909c';
+      ctx.fillText(e.kw.join(', '), mx, my + 8);
+    }
+  });
+
+  nodes.forEach(n => {
+    const isMain = mainId && n.id == mainId;
+    const isHover = hoverN && hoverN.id === n.id;
+    const r = isMain ? n.r + 5 : isHover ? n.r + 3 : n.r;
+    
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r + 10, 0, Math.PI * 2);
+    const grad = ctx.createRadialGradient(n.x, n.y, r, n.x, n.y, r + 10);
+    grad.addColorStop(0, (STATUS_COLORS[n.status] || '#94a3b8') + (isMain ? '40' : '18'));
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = STATUS_COLORS[n.status] || '#94a3b8';
+    ctx.fill();
+    
+    ctx.strokeStyle = isMain ? '#1e293b' : isHover ? '#475569' : '#fff';
+    ctx.lineWidth = isMain ? 3 : isHover ? 2 : 1.5;
+    ctx.stroke();
+    
+    const fz = isMain || isHover ? scale.fontHover : scale.fontNormal;
+    ctx.font = `${isMain ? '800' : isHover ? '700' : '600'} ${fz}px Heebo`;
+    ctx.fillStyle = '#1e293b';
+    ctx.textAlign = 'center';
+    ctx.fillText(n.label, n.x, n.y + r + scale.labelOffset);
+    
+    if (nodes.length <= 10) {
+      ctx.font = `400 ${Math.max(8, fz - 2)}px Heebo`;
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(n.status, n.x, n.y + r + scale.labelOffset + 14);
+    }
+  });
+}
+
+function showTip(tip, event, node) {
+  if (isMobile) return; // No tooltips on touch devices
+  tip.querySelector('.tip-name').textContent = node.label;
+  tip.querySelector('.tip-desc').textContent = node.desc;
+  tip.querySelector('.tip-kw').innerHTML = node.kw.map(k => `<span>${k}</span>`).join('');
+  tip.style.left = (event.clientX + 12) + 'px';
+  tip.style.top = (event.clientY + 12) + 'px';
+  tip.classList.add('show');
+}
+
+let miniHoverNode = null;
+
+function drawMiniNet() {
+  const cv = document.getElementById('netCanvas');
+  const ctx = cv.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = cv.getBoundingClientRect();
+  const W = rect.width;
+  const H = rect.height;
+  
+  cv.width = W * dpr;
+  cv.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  
+  const scale = getNetworkScale(projectsData.length, W, H);
+  const maxConns = Math.max(...projectsData.map(p => p.total_connections), 1);
+  
+  const nodes = projectsData.map(p => ({
+    id: p.id, label: p.name, status: p.status, conns: p.total_connections, 
+    kw: p.keywords, desc: p.description, 
+    r: scale.minR + (p.total_connections / maxConns) * (scale.maxR - scale.minR),
+    x: 0, y: 0, vx: 0, vy: 0
+  }));
+  
+  const edges = buildEdges(projectsData);
+  const nodeMap = {};
+  nodes.forEach(n => nodeMap[n.id] = n);
+  
+  layoutNodes(nodes, edges, W, H, scale, 0);
+  
+  const hlIds = new Set();
+  const hlEdges = new Set();
+  
+  if (selectedProject) {
+    hlIds.add(selectedProject.id);
+    (selectedProject.similar_projects || []).forEach(s => hlIds.add(s.project_id));
+    edges.forEach((e, i) => {
+      if (e.src == selectedProject.id || e.tgt == selectedProject.id) hlEdges.add(i);
+    });
+  } else if (selectedKeyword) {
+    projectsData.forEach(p => { if (p.keywords.includes(selectedKeyword)) hlIds.add(p.id); });
+    edges.forEach((e, i) => {
+      if (hlIds.has(e.src) && hlIds.has(e.tgt) && e.kw.includes(selectedKeyword)) hlEdges.add(i);
+    });
+  }
+  
+  const hasFilter = hlIds.size > 0;
+  ctx.clearRect(0, 0, W, H);
+  
+  edges.forEach((e, i) => {
+    const a = nodeMap[e.src];
+    const b = nodeMap[e.tgt];
+    if (!a || !b) return;
+    
+    const hl = hlEdges.has(i);
+    const dim = hasFilter && !hl;
+    
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    
+    if (dim) {
+      ctx.strokeStyle = '#e5e7ee';
+      ctx.lineWidth = 0.5;
+    } else if (e.w >= 2) {
+      ctx.strokeStyle = hl ? '#ef4444' : '#f59e0b';
+      ctx.lineWidth = Math.min(1 + e.w, 4);
+      ctx.globalAlpha = hl ? 1 : 0.5;
+    } else {
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.3;
+    }
+    
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  });
+  
+  nodes.forEach(n => {
+    const hl = hlIds.has(n.id);
+    const dim = hasFilter && !hl;
+    const isHover = miniHoverNode && miniHoverNode.id === n.id;
+    const r = isHover ? n.r + 2 : n.r;
+    
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = dim ? '#e5e7ee' : (STATUS_COLORS[n.status] || '#94a3b8');
+    ctx.globalAlpha = dim ? 0.3 : 1;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    
+    if (!dim) {
+      ctx.strokeStyle = isHover ? '#1e293b' : '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      
+      ctx.font = `${isHover ? '600' : '500'} ${scale.fontNormal}px Heebo`;
+      ctx.fillStyle = '#475569';
+      ctx.textAlign = 'center';
+      ctx.fillText(n.label, n.x, n.y + r + scale.labelOffset);
+    }
+  });
+  
+  document.getElementById('netLegend').innerHTML = Object.entries(STATUS_COLORS).map(([s, c]) => `
+    <div class="net-leg"><div class="net-dot" style="background:${c}"></div>${s}</div>
+  `).join('');
+  
+  const tip = document.getElementById('tip');
+  
+  function getNodeAtMouse(e) {
+    const r = cv.getBoundingClientRect();
+    const mx = e.clientX - r.left;
+    const my = e.clientY - r.top;
+    return nodes.find(n => Math.hypot(n.x - mx, n.y - my) <= n.r + 8);
+  }
+  
+  cv.onmousemove = e => {
+    const n = getNodeAtMouse(e);
+    miniHoverNode = n;
+    drawMiniNet();
+    
+    if (n) {
+      cv.style.cursor = 'pointer';
+      showTip(tip, e, n);
+    } else {
+      cv.style.cursor = 'grab';
+      tip.classList.remove('show');
+    }
+  };
+  
+  cv.onclick = e => {
+    const n = getNodeAtMouse(e);
+    if (n) selectById(n.id);
+    else clearFilter();
+  };
+  
+  // Touch handling
+  cv.ontouchstart = e => {
+    if (e.touches.length === 1) {
+      const r = cv.getBoundingClientRect();
+      const t = e.touches[0];
+      const fakeEvent = { clientX: t.clientX, clientY: t.clientY };
+      const n = getNodeAtMouse(fakeEvent);
+      if (n) {
+        e.preventDefault();
+        selectById(n.id);
+      }
+    }
+  };
+  
+  cv.onmouseleave = () => {
+    miniHoverNode = null;
+    tip.classList.remove('show');
+    drawMiniNet();
+  };
+}
+
+// ════════════════════════════════════════════════════════════════
+//   FILES LOOKUP & RENDERING
+// ════════════════════════════════════════════════════════════════
+function normalizeProjectName(s) {
+  if (!s) return '';
+  s = s.normalize('NFC');
+  s = s.replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF\u0300-\u036F]/g, '');
+  return s.toLowerCase().replace(
+    /[\s_\-.,;:!?'"`\\\/()\[\]{}<>\u05F3\u05F4\u2018\u2019\u201C\u201D\u2032\u2033]/g,
+    ''
+  );
+}
+
+function getProjectFiles(project) {
+  if (!project) return null;
+  const user = project.responsible;
+  if (user && projectFilesByUser[user] && projectFilesByUser[user].projects) {
+    const proj = projectFilesByUser[user].projects[project.name];
+    if (proj) return { ...proj, user: user, original_name: project.name };
+  }
+  return projectFiles[normalizeProjectName(project.name)] || null;
+}
+
+function fmtFileSize(bytes) {
+  if (bytes < 1024) return bytes + 'B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + 'K';
+  return (bytes / (1024 * 1024)).toFixed(1) + 'M';
+}
+
+function fileIcon(ext) {
+  const e = (ext || '').toLowerCase();
+  if (['.py', '.ipynb'].includes(e)) return '🐍';
+  if (['.js', '.ts', '.jsx', '.tsx', '.html', '.css'].includes(e)) return '⚡';
+  if (['.sql'].includes(e)) return '🗄';
+  if (['.pdf'].includes(e)) return '📕';
+  if (['.docx', '.doc'].includes(e)) return '📘';
+  if (['.xlsx', '.xls', '.csv'].includes(e)) return '📊';
+  if (['.pptx', '.ppt'].includes(e)) return '📙';
+  if (['.md', '.txt'].includes(e)) return '📝';
+  if (['.json', '.xml', '.yaml', '.yml'].includes(e)) return '⚙';
+  return '📄';
+}
+
+function renderFileList(items, max) {
+  max = max || 25;
+  const shown = items.slice(0, max).map(f => `
+    <div class="noi-file" title="${f.path}">
+      <span class="noi-fext">${fileIcon(f.extension)}</span>
+      <span class="noi-fname">${f.name}</span>
+      <span class="noi-fsize">${fmtFileSize(f.size_bytes)}</span>
+    </div>`).join('');
+  const more = items.length > max
+    ? `<div class="noi-more">+ ${items.length - max} עוד...</div>` : '';
+  return shown + more;
+}
+
+function renderProjectFiles(fd, project) {
+  if (!fd) {
+    const searched = project ? project.name : '';
+    const normalized = normalizeProjectName(searched);
+    const allKeys = Object.keys(projectFiles);
+    
+    if (!window.PROJECT_FILES) {
+      return `
+        <div class="noi-files">
+          <div class="noi-empty" style="text-align:right;direction:rtl">
+            <strong style="color:var(--red)">⚠ projects_files.js לא נטען</strong>
+          </div>
+        </div>`;
+    }
+    const scored = allKeys.map(k => {
+      let overlap = 0;
+      for (const c of normalized) if (k.includes(c)) overlap++;
+      return { k, overlap };
+    }).sort((a, b) => b.overlap - a.overlap).slice(0, 5);
+    return `
+      <div class="noi-files">
+        <div class="noi-empty" style="text-align:right;direction:rtl">
+          <strong>לא נמצאה תיקיית פרוייקט</strong>
+          <div style="margin-top:0.6rem;font-family:'IBM Plex Mono';font-size:0.7rem;color:var(--text2)">
+            <div>חיפוש: <span style="color:var(--text)">${searched}</span></div>
+            <div>נורמליזציה: <span style="color:var(--blue)">${normalized}</span></div>
+            <div style="margin-top:0.5rem">${allKeys.length} פרוייקטים בתיקייה. דומים:</div>
+            ${scored.map(s => `<div style="margin-top:0.15rem">• ${s.k}</div>`).join('')}
+          </div>
+        </div>
+      </div>`;
+  }
+  const section = (title, items) => items.length ? `
+    <div class="noi-files-section">
+      <h4>${title}<span class="noi-count">${items.length}</span></h4>
+      ${renderFileList(items)}
+    </div>` : '';
+  return `
+    <div class="noi-files">
+      <div class="noi-folder">📁 ${fd.user || ''} / ${fd.original_name || ''}</div>
+      ${section('🐍 סקריפטים', fd.scripts || [])}
+      ${section('📄 מסמכים', fd.documents || [])}
+      ${section('📦 אחר', fd.other || [])}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════
+//   OVERLAY (NETWORK FOCUS)
+// ════════════════════════════════════════════════════════════════
+let fullNodes = [], fullEdges = [], fullNodeMap = {}, fullHoverNode = null, fullScale = null;
+
+function toggleOverlayInfo() {
+  document.getElementById('overlayInfo').classList.toggle('open');
+}
+
+function openOverlay() {
+  document.getElementById('netOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  
+  // Reset mobile info panel state
+  document.getElementById('overlayInfo').classList.remove('open');
+  
+  let fIds = new Set();
+  
+  if (selectedProject) {
+    fIds.add(selectedProject.id);
+    (selectedProject.similar_projects || []).forEach(s => fIds.add(s.project_id));
+    document.getElementById('overlayTitle').textContent = selectedProject.name;
+    document.getElementById('overlaySub').textContent = `${selectedProject.similar_projects.length} קשרים`;
+  } else if (selectedKeyword) {
+    projectsData.forEach(p => { if (p.keywords.includes(selectedKeyword)) fIds.add(p.id); });
+    document.getElementById('overlayTitle').textContent = `נושא: ${selectedKeyword}`;
+    document.getElementById('overlaySub').textContent = `${fIds.size} פרוייקטים`;
+  }
+  
+  const fData = projectsData.filter(p => fIds.has(p.id));
+  fullEdges = [];
+  const seen = new Set();
+  
+  fData.forEach(p => {
+    (p.similar_projects || []).forEach(s => {
+      if (!fIds.has(s.project_id)) return;
+      const k = [p.id, s.project_id].sort().join('-');
+      if (!seen.has(k)) {
+        seen.add(k);
+        fullEdges.push({ src: p.id, tgt: s.project_id, w: s.score, kw: s.shared_keywords });
+      }
+    });
+  });
+  
+  const info = document.getElementById('overlayInfo');
+  
+  if (selectedProject) {
+    const sims = selectedProject.similar_projects || [];
+    const fileData = getProjectFiles(selectedProject);
+    info.innerHTML = `
+      <div class="noi-head">
+        <h3>${selectedProject.name}</h3>
+        <div class="noi-sub">${selectedProject.description}</div>
+      </div>
+      <div class="noi-list">
+        ${sims.length ? sims.map(s => `
+          <div class="noi-item" onclick="selectById('${s.project_id}')">
+            <div>
+              <div class="noi-name">${s.project_name}</div>
+              <div class="noi-kw">${s.shared_keywords.join(', ')}</div>
+            </div>
+            <span class="noi-score ${s.score >= 3 ? 'ci-s3' : s.score >= 2 ? 'ci-s2' : 'ci-s1'}">${s.score}</span>
+          </div>
+        `).join('') : '<div class="conn-empty">אין קשרים</div>'}
+      </div>
+      ${renderProjectFiles(fileData, selectedProject)}    `;
+  } else if (selectedKeyword) {
+    info.innerHTML = `
+      <div class="noi-head">
+        <h3>${selectedKeyword}</h3>
+        <div class="noi-sub">${fData.length} פרוייקטים</div>
+      </div>
+      <div class="noi-list">
+        ${fData.map(p => `
+          <div class="noi-item" onclick="selectById('${p.id}')">
+            <div><div class="noi-name">${p.name}</div></div>
+            <span class="badge ${BADGE_CLASSES[p.status] || 'b-old'}">${p.status}</span>
+          </div>
+        `).join('')}
+      </div>
     `;
-    tooltip.classList.add("show");
-    moveTooltip(e, tooltip);
   }
-  function moveTooltip(e, tooltip){
-    const pad = 16;
-    const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
-    let x = e.clientX - tw - pad;
-    let y = e.clientY + pad;
-    if (x < pad) x = e.clientX + pad;
-    if (y + th > window.innerHeight - pad) y = e.clientY - th - pad;
-    tooltip.style.left = x + "px";
-    tooltip.style.top  = y + "px";
+  
+  requestAnimationFrame(() => {
+    const cv = document.getElementById('fullNetCanvas');
+    const ctx = cv.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const par = cv.parentElement;
+    const W = par.clientWidth;
+    const H = par.clientHeight;
+    
+    cv.width = W * dpr;
+    cv.height = H * dpr;
+    cv.style.width = W + 'px';
+    cv.style.height = H + 'px';
+    ctx.scale(dpr, dpr);
+    
+    const iW = isMobile ? 0 : 310;
+    fullScale = getNetworkScale(fData.length, W - iW, H);
+    const mxC = Math.max(...fData.map(p => p.total_connections), 1);
+    
+    fullNodes = fData.map(p => ({
+      id: p.id, label: p.name, status: p.status, conns: p.total_connections, 
+      kw: p.keywords, desc: p.description, 
+      r: fullScale.minR + (p.total_connections / mxC) * (fullScale.maxR - fullScale.minR),
+      x: 0, y: 0, vx: 0, vy: 0
+    }));
+    
+    fullNodeMap = {};
+    fullNodes.forEach(n => fullNodeMap[n.id] = n);
+    
+    layoutNodes(fullNodes, fullEdges, W, H, fullScale, iW);
+    renderGraph(ctx, W, H, fullNodes, fullEdges, fullNodeMap, { 
+      scale: fullScale, mainId: selectedProject ? selectedProject.id : null, hoverN: fullHoverNode, showGrid: true, showEdgeKW: true 
+    });
+    
+    document.getElementById('overlayLegend').innerHTML = Object.entries(STATUS_COLORS).map(([s, c]) => `
+      <div class="net-leg"><div class="net-dot" style="background:${c}"></div>${s}</div>
+    `).join('');
+    
+    const tip = document.getElementById('tip');
+    
+    function getNodeAtMouse(e) {
+      const r = cv.getBoundingClientRect();
+      const mx = e.clientX - r.left;
+      const my = e.clientY - r.top;
+      return fullNodes.find(n => Math.hypot(n.x - mx, n.y - my) <= n.r + 8);
+    }
+    
+    cv.onmousemove = e => {
+      const n = getNodeAtMouse(e);
+      fullHoverNode = n;
+      renderGraph(ctx, W, H, fullNodes, fullEdges, fullNodeMap, { 
+        scale: fullScale, mainId: selectedProject ? selectedProject.id : null, hoverN: fullHoverNode, showGrid: true, showEdgeKW: true 
+      });
+      
+      if (n) {
+        cv.style.cursor = 'pointer';
+        showTip(tip, e, n);
+      } else {
+        cv.style.cursor = 'default';
+        tip.classList.remove('show');
+      }
+    };
+    
+    cv.onclick = e => {
+      const n = getNodeAtMouse(e);
+      if (n && n.id !== (selectedProject ? selectedProject.id : null)) selectById(n.id);
+    };
+    
+    cv.ontouchstart = e => {
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        const n = getNodeAtMouse({ clientX: t.clientX, clientY: t.clientY });
+        if (n && n.id !== (selectedProject ? selectedProject.id : null)) {
+          e.preventDefault();
+          selectById(n.id);
+        }
+      }
+    };
+    
+    cv.onmouseleave = () => {
+      fullHoverNode = null;
+      tip.classList.remove('show');
+      renderGraph(ctx, W, H, fullNodes, fullEdges, fullNodeMap, { 
+        scale: fullScale, mainId: selectedProject ? selectedProject.id : null, hoverN: null, showGrid: true, showEdgeKW: true 
+      });
+    };
+  });
+}
+
+function closeOverlay() {
+  document.getElementById('netOverlay').classList.remove('open');
+  document.getElementById('overlayInfo').classList.remove('open');
+  if (!isAnyOverlayOpen() && !document.getElementById('sidebar').classList.contains('open')) {
+    document.body.style.overflow = '';
   }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('personModal').classList.contains('open')) {
+      closePersonModal();
+      return;
+    }
+    if (document.getElementById('sidebar').classList.contains('open')) {
+      closeSidebar();
+      return;
+    }
+    closeOverlay();
+    clearFilter();
+  }
+});
+
+// Resize handler — redraw canvases
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (activeTab === 'overview') drawMiniNet();
+    if (activeTab === 'timeline') drawMonthlyChart();
+  }, 200);
+});
+
+document.addEventListener('DOMContentLoaded', boot);
 </script>
 </body>
 </html>
