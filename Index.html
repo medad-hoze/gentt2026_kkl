@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>תכולות 2026 — Gantt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:        #0e1216;
+    --bg-2:      #141a21;
+    --panel:     #181f27;
+    --panel-2:   #1f2730;
+    --line:      #232c36;
+    --line-soft: #1c242d;
+    --ink:       #e8ecef;
+    --ink-dim:   #9aa6b2;
+    --ink-faint: #5b6772;
+    --accent:    #f5b14a;
+    --accent-2:  #ff7a59;
+    --bar-1:     #4ea4c4;
+    --bar-2:     #6f8edb;
+    --bar-3:     #c98aa9;
+    --bar-4:     #8fb98a;
+    --bar-5:     #d4a35a;
+    --grid:      rgba(255,255,255,.04);
+    --grid-month:rgba(255,255,255,.10);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(245,177,74,.06), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(78,164,196,.07), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Heebo", system-ui, -apple-system, sans-serif;
+    font-weight:400;
+    min-height:100vh;
+    letter-spacing:.005em;
+  }
+  .wrap{ max-width:1480px; margin:0 auto; padding:48px 36px 80px; }
+
+  header{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    gap:24px; margin-bottom:36px; padding-bottom:24px;
+    border-bottom:1px solid var(--line);
+  }
+  .title-block{display:flex; flex-direction:column; gap:6px}
+  .eyebrow{
+    font-family:"JetBrains Mono", monospace;
+    font-size:11px; letter-spacing:.18em;
+    color:var(--ink-faint); text-transform:uppercase;
+  }
+  h1{
+    font-family:"Frank Ruhl Libre", serif;
+    font-weight:900; font-size:clamp(36px, 5vw, 56px);
+    line-height:1; margin:0; letter-spacing:-.01em;
+  }
+  h1 .num{ color:var(--accent); font-feature-settings:"tnum"; }
+  .subtitle{ color:var(--ink-dim); font-size:14px; margin-top:8px; max-width:520px; }
+
+  .stats{ display:flex; gap:32px; }
+  .stat{ display:flex; flex-direction:column; gap:4px; text-align:left; }
+  .stat .v{
+    font-family:"Frank Ruhl Libre", serif;
+    font-size:34px; font-weight:700; line-height:1;
+    color:var(--ink); font-feature-settings:"tnum";
+  }
+  .stat .l{
+    font-family:"JetBrains Mono", monospace;
+    font-size:10px; letter-spacing:.16em;
+    color:var(--ink-faint); text-transform:uppercase;
+  }
+
+  .legend{
+    display:flex; align-items:center; gap:22px; flex-wrap:wrap;
+    padding:14px 18px; background:var(--panel);
+    border:1px solid var(--line); border-radius:10px;
+    margin-bottom:18px; font-size:12.5px; color:var(--ink-dim);
+  }
+  .legend .item{display:flex; align-items:center; gap:8px}
+  .swatch{ width:14px; height:14px; border-radius:3px;
+    background:linear-gradient(135deg, var(--bar-1), var(--bar-2)); }
+  .today-marker{ width:2px; height:14px; background:var(--accent); box-shadow:0 0 8px var(--accent); }
+  .danger-marker{ width:14px; height:14px; border-radius:3px; background:var(--accent-2); opacity:.85; }
+  .legend .sep{flex:1}
+  .legend .meta{ font-family:"JetBrains Mono", monospace; font-size:11px;
+    color:var(--ink-faint); letter-spacing:.08em; }
+  .reload-btn{
+    background:var(--panel-2); color:var(--ink-dim);
+    border:1px solid var(--line); border-radius:6px;
+    padding:6px 12px; font-family:"Heebo", sans-serif;
+    font-size:11.5px; cursor:pointer; transition:all .2s ease;
+  }
+  .reload-btn:hover{ background:var(--line); color:var(--ink); }
+
+  .gantt{
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 30px 80px -40px rgba(0,0,0,.6);
+  }
+  .gantt-header{
+    display:grid; grid-template-columns: 320px 1fr;
+    border-bottom:1px solid var(--line); background:var(--panel-2);
+  }
+  .gh-left{
+    padding:18px 22px; border-left:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .gh-left .label{
+    font-family:"JetBrains Mono", monospace; font-size:10px;
+    letter-spacing:.18em; color:var(--ink-faint); text-transform:uppercase;
+  }
+  .months{ display:grid; height:100%; align-items:stretch; }
+  .month{
+    border-right:1px solid var(--grid-month);
+    padding:14px 12px 12px; display:flex; flex-direction:column;
+    gap:2px; min-height:62px;
+  }
+  .month:last-child{border-right:none}
+  .month .m-name{
+    font-family:"Frank Ruhl Libre", serif;
+    font-size:15px; font-weight:700; color:var(--ink);
+  }
+  .month .m-year{
+    font-family:"JetBrains Mono", monospace;
+    font-size:10px; color:var(--ink-faint); letter-spacing:.1em;
+  }
+  .month.is-current .m-name{ color:var(--accent) }
+  .month.is-current .m-year{ color:var(--accent); opacity:.7 }
+
+  .gantt-body{ position:relative }
+  .row{
+    display:grid; grid-template-columns: 320px 1fr;
+    border-bottom:1px solid var(--line-soft);
+    transition:background .25s ease;
+  }
+  .row:last-child{border-bottom:none}
+  .row:hover{ background:rgba(255,255,255,.015) }
+  .row-info{
+    padding:18px 22px; border-left:1px solid var(--line);
+    display:flex; flex-direction:column; gap:6px; background:var(--panel);
+  }
+  .task-name{
+    font-family:"Frank Ruhl Libre", serif;
+    font-size:18px; font-weight:700; line-height:1.25; color:var(--ink);
+  }
+  .task-people{ font-size:12px; color:var(--ink-dim); line-height:1.4; }
+  .task-people::before{
+    content:""; display:inline-block; width:6px; height:6px;
+    border-radius:50%; background:var(--ink-faint);
+    margin-left:8px; transform:translateY(-2px);
+  }
+
+  .track{
+    position:relative;
+    background-image:
+      repeating-linear-gradient(to left,
+        var(--grid) 0, var(--grid) 1px,
+        transparent 1px, transparent var(--month-w, 100px)
+      );
+  }
+
+  .bar{
+    position:absolute; top:50%; transform:translateY(-50%);
+    height:34px; border-radius:6px; overflow:hidden; cursor:pointer;
+    transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
+    box-shadow: 0 6px 20px -8px rgba(0,0,0,.6);
+  }
+  .bar:hover{
+    transform:translateY(-50%) translateY(-1px);
+    box-shadow: 0 12px 28px -10px rgba(0,0,0,.7);
+    filter:brightness(1.08); z-index:5;
+  }
+  .bar .fill{ position:absolute; inset:0; }
+  .bar.c1 .fill{background:linear-gradient(90deg, var(--bar-1), var(--bar-2))}
+  .bar.c2 .fill{background:linear-gradient(90deg, var(--bar-2), var(--bar-3))}
+  .bar.c3 .fill{background:linear-gradient(90deg, var(--bar-3), var(--bar-5))}
+  .bar.c4 .fill{background:linear-gradient(90deg, var(--bar-4), var(--bar-1))}
+  .bar.c5 .fill{background:linear-gradient(90deg, var(--bar-5), var(--bar-3))}
+  .bar.danger .fill{ background:linear-gradient(90deg, var(--accent-2), #ff9d6f); }
+  .bar .label{
+    position:absolute; inset:0; display:flex;
+    align-items:center; justify-content:space-between;
+    padding:0 12px; font-size:12.5px; font-weight:500;
+    color:#0e1216; mix-blend-mode:screen;
+    pointer-events:none; white-space:nowrap;
+  }
+  .bar .label .due{
+    font-family:"JetBrains Mono", monospace;
+    font-size:11px; font-weight:600; opacity:.85;
+  }
+  .bar::before{
+    content:""; position:absolute; left:0; top:0; bottom:0;
+    width:3px; background:rgba(0,0,0,.35);
+  }
+
+  .today-overlay{
+    position:absolute;
+    top:0; bottom:0;
+    left:0;
+    right:320px;           /* match the 320px sidebar so overlay = track width */
+    pointer-events:none;
+    z-index:3;
+  }
+
+  .today-line{
+    position:absolute; top:0; bottom:0; width:2px;
+    background:var(--accent);
+    box-shadow:0 0 12px rgba(245,177,74,.6);
+    pointer-events:none;
+  }
+  .today-pill{
+    position:absolute;
+    top:-30px; right:50%; transform:translateX(50%);
+    background:var(--accent); color:#0e1216;
+    font-size:10px; font-weight:700;
+    padding:3px 10px; border-radius:4px;
+    letter-spacing:.06em; font-family:"Heebo", sans-serif;
+    white-space:nowrap;
+    display:flex; align-items:center; gap:6px;
+    box-shadow:0 4px 12px rgba(245,177,74,.4);
+  }
+  .today-pill .date{
+    font-family:"JetBrains Mono", monospace;
+    font-size:10px; font-weight:600;
+    opacity:.8;
+    border-right:1px solid rgba(14,18,22,.3);
+    padding-right:6px;
+  }
+
+  .tooltip{
+    position:fixed; z-index:50;
+    background:var(--bg-2); border:1px solid var(--line);
+    border-radius:10px; padding:14px 16px; max-width:380px;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,.8);
+    pointer-events:none; opacity:0; transform:translateY(4px);
+    transition:opacity .15s ease, transform .15s ease;
+    font-size:13px; line-height:1.55;
+  }
+  .tooltip.show{ opacity:1; transform:translateY(0) }
+  .tooltip .tt-title{
+    font-family:"Frank Ruhl Libre", serif;
+    font-weight:700; font-size:16px; margin-bottom:8px;
+    color:var(--ink); border-bottom:1px solid var(--line);
+    padding-bottom:8px;
+  }
+  .tooltip .tt-row{ display:flex; gap:8px; margin:4px 0; }
+  .tooltip .tt-key{
+    font-family:"JetBrains Mono", monospace;
+    font-size:10px; letter-spacing:.12em;
+    color:var(--ink-faint); text-transform:uppercase;
+    min-width:70px; padding-top:2px;
+  }
+  .tooltip .tt-val{ color:var(--ink-dim); flex:1 }
+  .tooltip .tt-notes{
+    margin-top:10px; padding-top:10px;
+    border-top:1px solid var(--line);
+    color:var(--ink-dim); font-size:12.5px; line-height:1.6;
+  }
+
+  footer{
+    margin-top:32px; display:flex;
+    justify-content:space-between; align-items:center;
+    font-family:"JetBrains Mono", monospace; font-size:10.5px;
+    color:var(--ink-faint); letter-spacing:.14em; text-transform:uppercase;
+  }
+  footer .dot{
+    display:inline-block; width:6px; height:6px; border-radius:50%;
+    background:var(--accent); margin-left:8px;
+    box-shadow:0 0 8px var(--accent);
+    animation:pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse{ 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:.5; transform:scale(.85)} }
+
+  .row .bar{ animation:bar-in .7s cubic-bezier(.2,.7,.2,1) backwards; }
+  @keyframes bar-in{
+    from{ transform:translateY(-50%) scaleX(0); transform-origin:right center; opacity:0 }
+    to  { transform:translateY(-50%) scaleX(1); opacity:1 }
+  }
+
+  /* Loader / Drop zone */
+  .loader{
+    border:2px dashed var(--line);
+    border-radius:14px;
+    padding:64px 36px;
+    text-align:center;
+    background:var(--panel);
+    transition:border-color .25s ease, background .25s ease;
+  }
+  .loader.drag{ border-color:var(--accent); background:rgba(245,177,74,.04); }
+  .loader h2{
+    font-family:"Frank Ruhl Libre", serif;
+    font-size:28px; margin:0 0 8px;
+    color:var(--ink);
+  }
+  .loader p{ color:var(--ink-dim); margin:0 0 24px; font-size:14px; }
+  .loader .file-pick{
+    display:inline-block;
+    background:var(--accent); color:#0e1216;
+    padding:12px 28px; border-radius:8px;
+    font-weight:700; font-size:14px; cursor:pointer;
+    border:none; font-family:"Heebo", sans-serif;
+    transition:transform .15s ease, filter .15s ease;
+  }
+  .loader .file-pick:hover{ filter:brightness(1.1); transform:translateY(-1px); }
+  .loader .hint{
+    font-family:"JetBrains Mono", monospace;
+    font-size:11px; color:var(--ink-faint);
+    letter-spacing:.08em; margin-top:18px;
+  }
+  .loader .err{
+    color:var(--accent-2); font-size:13px; margin-top:14px; min-height:18px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title-block">
+      <div class="eyebrow">Project Portfolio · GeomAI</div>
+      <h1>תכולות <span class="num">2026</span></h1>
+      <div class="subtitle">לוח זמנים של פרויקטים פעילים — תרשים גאנט אינטראקטיבי. ריחוף על משימה לפרטים מלאים.</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="v" id="stat-total">—</div><div class="l">Total</div></div>
+      <div class="stat"><div class="v" id="stat-active">—</div><div class="l">Active</div></div>
+      <div class="stat"><div class="v" id="stat-soon">—</div><div class="l">≤ 30d</div></div>
+    </div>
+  </header>
+
+  <div class="legend" id="legend" style="display:none;">
+    <div class="item"><span class="swatch"></span><span>משימה פעילה</span></div>
+    <div class="item"><span class="danger-marker"></span><span>דדליין קרוב (≤ 30 יום)</span></div>
+    <div class="item"><span class="today-marker"></span><span>היום</span></div>
+    <div class="sep"></div>
+    <div class="meta" id="range-label">—</div>
+    <button class="reload-btn" id="load-other">החלף קובץ</button>
+  </div>
+
+  <div class="loader" id="loader" style="display:none;">
+    <h2>טען קובץ JSON</h2>
+    <p>גרור לכאן את הקובץ <code style="font-family:JetBrains Mono,monospace;color:var(--accent);">data_2026.json</code> או לחץ לבחירה</p>
+    <label class="file-pick">
+      בחר קובץ
+      <input type="file" id="file-input" accept=".json,application/json" hidden>
+    </label>
+    <div class="hint">הקובץ נטען מקומית — לא נשלח לשום מקום</div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="gantt" id="gantt" style="display:none;"></div>
+
+  <footer>
+    <div><span class="dot"></span>Live · עודכן <span id="updated"></span></div>
+    <div>SmartCAD / GeomAI</div>
+  </footer>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+  const JSON_URL = "data_2026.json";
+  const ROOT_KEY = "תכולות 2026";
+  const DEFAULT_LEAD_MONTHS = 6;
+  const HE_MONTHS_SHORT = ["ינו׳","פבר׳","מרץ","אפר׳","מאי","יוני","יולי","אוג׳","ספט׳","אוק׳","נוב׳","דצמ׳"];
+
+  const loaderEl = document.getElementById("loader");
+  const ganttEl  = document.getElementById("gantt");
+  const legendEl = document.getElementById("legend");
+  const errEl    = document.getElementById("err");
+
+  // Try fetch first; fall back to file picker (file:// blocks fetch in most browsers)
+  fetch(JSON_URL, { cache: "no-cache" })
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(json => render(json))
+    .catch(() => showLoader());
+
+  function showLoader(){
+    loaderEl.style.display = "block";
+    ganttEl.style.display  = "none";
+    legendEl.style.display = "none";
+  }
+
+  document.getElementById("file-input").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (file) readFile(file);
+  });
+
+  ["dragenter","dragover"].forEach(ev =>
+    loaderEl.addEventListener(ev, e => { e.preventDefault(); loaderEl.classList.add("drag"); }));
+  ["dragleave","drop"].forEach(ev =>
+    loaderEl.addEventListener(ev, e => { e.preventDefault(); loaderEl.classList.remove("drag"); }));
+  loaderEl.addEventListener("drop", e => {
+    const file = e.dataTransfer.files[0];
+    if (file) readFile(file);
+  });
+
+  function readFile(file){
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const json = JSON.parse(ev.target.result);
+        render(json);
+      } catch (err) {
+        errEl.textContent = "שגיאה בקריאת הקובץ: " + err.message;
+      }
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
+  document.getElementById("load-other").addEventListener("click", () => {
+    showLoader();
+    errEl.textContent = "";
+  });
+
+  function parseDate(s){
+    const [d] = String(s).split(" ");
+    const [y,m,day] = d.split("-").map(Number);
+    return new Date(y, m-1, day);
+  }
+  function fmtDateHe(d){
+    return `${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()}`;
+  }
+  function monthsBetween(a, b){ return (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth()); }
+  function addMonths(d, n){ const nd = new Date(d); nd.setMonth(nd.getMonth()+n); return nd; }
+  function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
+  function daysBetween(a, b){ return (b - a) / (1000*60*60*24); }
+
+  function render(json){
+    const items = json[ROOT_KEY];
+    if (!Array.isArray(items) || items.length === 0){
+      errEl.textContent = `לא נמצאו פריטים תחת המפתח "${ROOT_KEY}"`;
+      showLoader();
+      return;
+    }
+
+    const today = new Date();
+    const tasks = items.map((t, i) => {
+      const end = parseDate(t["תאריך"]);
+      let start = addMonths(end, -DEFAULT_LEAD_MONTHS);
+      if (start > today) start = addMonths(today, -1);
+      const daysLeft = Math.ceil(daysBetween(today, end));
+      return {
+        id: i,
+        name: t["משימה"],
+        people: t["עובדים"],
+        start, end,
+        notes: t["הערות"] || "",
+        daysLeft,
+        colorClass: `c${(i % 5) + 1}`,
+        danger: daysLeft <= 30 && daysLeft >= 0
+      };
+    });
+
+    const minStart = startOfMonth(addMonths(tasks.reduce((a,t)=> t.start < a ? t.start : a, tasks[0].start), -1));
+    const maxEnd   = endOfMonth(addMonths(tasks.reduce((a,t)=> t.end   > a ? t.end   : a, tasks[0].end), 1));
+    const totalMonths = monthsBetween(minStart, maxEnd) + 1;
+    const months = Array.from({length: totalMonths}, (_,i) => addMonths(minStart, i));
+
+    const timelineStart = minStart;
+    const timelineEnd   = endOfMonth(maxEnd);
+    const totalSpanDays = daysBetween(timelineStart, timelineEnd);
+    const pctFromDate = d => (daysBetween(timelineStart, d) / totalSpanDays) * 100;
+
+    const headerHTML = `
+      <div class="gantt-header">
+        <div class="gh-left">
+          <span class="label">Task / משימה</span>
+          <span class="label">${tasks.length} items</span>
+        </div>
+        <div class="gh-right">
+          <div class="months" style="grid-template-columns: repeat(${totalMonths}, 1fr);">
+            ${months.map(m => {
+              const isCurrent = m.getFullYear() === today.getFullYear() && m.getMonth() === today.getMonth();
+              return `<div class="month ${isCurrent ? "is-current" : ""}">
+                <div class="m-name">${HE_MONTHS_SHORT[m.getMonth()]}</div>
+                <div class="m-year">${m.getFullYear()}</div>
+              </div>`;
+            }).join("")}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const rowsHTML = tasks.map((t, idx) => {
+      const leftPct  = pctFromDate(t.start);
+      const rightPct = pctFromDate(t.end);
+      const widthPct = rightPct - leftPct;
+      return `
+        <div class="row" data-id="${t.id}">
+          <div class="row-info">
+            <div class="task-name">${escapeHtml(t.name)}</div>
+            <div class="task-people">${escapeHtml(t.people)}</div>
+          </div>
+          <div class="track" style="--month-w:${100/totalMonths}%; height:64px;">
+            <div class="bar ${t.danger ? "danger" : t.colorClass}"
+                 data-id="${t.id}"
+                 style="right:${leftPct}%; width:${widthPct}%; animation-delay:${idx*120}ms;">
+              <div class="fill"></div>
+              <div class="label">
+                <span>${escapeHtml(t.name)}</span>
+                <span class="due">${fmtDateHe(t.end)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    const todayPct = pctFromDate(today);
+    const todayLineHTML = (today >= timelineStart && today <= timelineEnd)
+      ? `<div class="today-overlay">
+           <div class="today-line" style="right:${todayPct}%">
+             <div class="today-pill">
+               <span class="date">${fmtDateHe(today)}</span>
+               <span>היום</span>
+             </div>
+           </div>
+         </div>`
+      : "";
+
+    ganttEl.innerHTML = headerHTML + `<div class="gantt-body">${rowsHTML}${todayLineHTML}</div>`;
+
+    document.getElementById("stat-total").textContent  = tasks.length;
+    document.getElementById("stat-active").textContent = tasks.filter(t => t.daysLeft >= 0).length;
+    document.getElementById("stat-soon").textContent   = tasks.filter(t => t.daysLeft <= 30 && t.daysLeft >= 0).length;
+    document.getElementById("range-label").textContent =
+      `${HE_MONTHS_SHORT[timelineStart.getMonth()]} ${timelineStart.getFullYear()} ← ${HE_MONTHS_SHORT[timelineEnd.getMonth()]} ${timelineEnd.getFullYear()}`;
+    document.getElementById("updated").textContent = fmtDateHe(today);
+
+    loaderEl.style.display = "none";
+    ganttEl.style.display  = "block";
+    legendEl.style.display = "flex";
+
+    bindTooltips(tasks);
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c =>
+      ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function bindTooltips(tasks){
+    const tooltip = document.getElementById("tooltip");
+    document.querySelectorAll(".bar").forEach(bar => {
+      bar.addEventListener("mouseenter", e => showTooltip(e, bar, tasks, tooltip));
+      bar.addEventListener("mousemove",  e => moveTooltip(e, tooltip));
+      bar.addEventListener("mouseleave", () => tooltip.classList.remove("show"));
+    });
+  }
+  function showTooltip(e, bar, tasks, tooltip){
+    const t = tasks[+bar.dataset.id];
+    const dueLabel = t.daysLeft < 0
+      ? `<span style="color:var(--accent-2)">חלף לפני ${Math.abs(t.daysLeft)} ימים</span>`
+      : t.daysLeft === 0
+        ? `<span style="color:var(--accent)">היום</span>`
+        : `<span style="color:${t.daysLeft<=30?"var(--accent-2)":"var(--ink-dim)"}">בעוד ${t.daysLeft} ימים</span>`;
+    tooltip.innerHTML = `
+      <div class="tt-title">${escapeHtml(t.name)}</div>
+      <div class="tt-row"><div class="tt-key">צוות</div><div class="tt-val">${escapeHtml(t.people)}</div></div>
+      <div class="tt-row"><div class="tt-key">התחלה</div><div class="tt-val">${fmtDateHe(t.start)}</div></div>
+      <div class="tt-row"><div class="tt-key">דדליין</div><div class="tt-val">${fmtDateHe(t.end)} · ${dueLabel}</div></div>
+      ${t.notes ? `<div class="tt-notes">${escapeHtml(t.notes)}</div>` : ""}
+    `;
+    tooltip.classList.add("show");
+    moveTooltip(e, tooltip);
+  }
+  function moveTooltip(e, tooltip){
+    const pad = 16;
+    const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+    let x = e.clientX - tw - pad;
+    let y = e.clientY + pad;
+    if (x < pad) x = e.clientX + pad;
+    if (y + th > window.innerHeight - pad) y = e.clientY - th - pad;
+    tooltip.style.left = x + "px";
+    tooltip.style.top  = y + "px";
+  }
+</script>
+</body>
+</html>
