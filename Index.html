@@ -508,8 +508,14 @@
 
     TASKS = items.map((t, i) => {
       const end = parseDate(t["תאריך"]);
-      let start = addMonths(end, -DEFAULT_LEAD_MONTHS);
-      if (start > today) start = addMonths(today, -1);
+      // Use explicit start date if provided, otherwise fall back to lead-time heuristic
+      let start;
+      if (t["תאריך התחלה"]) {
+        start = parseDate(t["תאריך התחלה"]);
+      } else {
+        start = addMonths(end, -DEFAULT_LEAD_MONTHS);
+        if (start > today) start = addMonths(today, -1);
+      }
       const workers = splitWorkers(t["עובדים"]);
       const daysLeft = Math.ceil((end - today) / (1000*60*60*24));
       const durationDays = Math.max(1, Math.round((end - start) / (1000*60*60*24)));
